@@ -165,6 +165,75 @@ Following test-driven development principles:
 ## Getting started
 
 ```bash
+# Build the project
 swift build
+
+# Run tests
 swift test --no-parallel
+
+# Run CLI demo
+.build/debug/nfl-predict --demo
+
+# Load real data (see DATA_LOADING.md for setup)
+swift run DataLoadingExample
 ```
+
+## Loading Real Data
+
+The system supports multiple data sources for comprehensive predictions. See [DATA_LOADING.md](DATA_LOADING.md) for complete
+setup instructions.
+
+### Quick Start
+
+```swift
+// ESPN (free, no API key required)
+let loader = try DataLoaderBuilder()
+    .withESPN()
+    .build()
+
+// Load games for a team
+let chiefs = NFLTeams.team(abbreviation: "KC")!
+let games = try await loader.loadGames(for: chiefs, season: 2024)
+
+// Load complete prediction context
+let context = try await loader.loadPredictionContext(for: game, lookbackDays: 7)
+```
+
+### Supported Data Sources
+
+**ESPN API** (Free, Public)
+- Live scores and game schedules
+- Team statistics and final scores
+- No API key required
+
+**NewsAPI.org** (Free tier: 100 requests/day)
+- 80,000+ news sources
+- Article search by team name
+- Register at https://newsapi.org/
+
+**Reddit API** (Free with registration)
+- Team subreddit posts
+- Community discussions and fan sentiment
+- Register at https://reddit.com/prefs/apps
+
+**X (Twitter) API v2** (Paid: $100/month)
+- Recent tweets and real-time updates
+- Beat reporters and verified accounts
+- Register at https://developer.x.com/
+
+### Configuration Example
+
+```swift
+// Set environment variables
+export NEWS_API_KEY="your_key"
+export CLAUDE_API_KEY="your_key"
+
+// Build comprehensive loader
+let loader = try DataLoaderBuilder()
+    .withESPN()
+    .withNewsAPI(apiKey: newsKey)
+    .withReddit(clientId: id, clientSecret: secret)
+    .build()
+```
+
+See [DATA_LOADING.md](DATA_LOADING.md) for detailed setup instructions, API costs, and best practices.
