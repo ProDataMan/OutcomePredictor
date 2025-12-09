@@ -6,7 +6,7 @@ struct PredictionView: View {
     @State private var awayTeam: TeamDTO?
     @State private var selectedSeason = Calendar.current.component(.year, from: Date())
     @State private var selectedWeek = 1
-    @State private var prediction: PredictionDTO?
+    @State private var prediction: PredictionResult?
     @State private var isLoading = false
     @State private var error: String?
     @State private var showingTeamPicker = false
@@ -216,8 +216,8 @@ struct PredictionView: View {
         let game = upcomingGames[index]
         homeTeam = game.homeTeam
         awayTeam = game.awayTeam
-        selectedSeason = game.season
-        selectedWeek = game.week
+        selectedSeason = game.season ?? Calendar.current.component(.year, from: Date())
+        selectedWeek = game.week ?? 1
 
         // Auto-predict this game
         Task {
@@ -235,9 +235,7 @@ struct PredictionView: View {
         do {
             prediction = try await apiClient.makePrediction(
                 home: homeTeam.abbreviation,
-                away: awayTeam.abbreviation,
-                season: selectedSeason,
-                week: selectedWeek
+                away: awayTeam.abbreviation
             )
         } catch {
             self.error = error.localizedDescription
@@ -308,15 +306,15 @@ struct PredictionResultView: View {
 
             // Game details
             VStack(spacing: 8) {
-                Text("Week \(prediction.week) • \(String(format: "%d", prediction.season))")
+                Text("\(homeTeam?.name ?? "Home") vs \(awayTeam?.name ?? "Away")")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
-                Text(prediction.location)
+                Text("Game Prediction")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
-                Text(prediction.scheduledDate, format: .dateTime.month(.wide).day().year())
+                Text("Prediction Result")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -495,11 +493,9 @@ struct PredictionResultView: View {
 
     private func loadTeamNews() async {
         loadingNews = true
-        async let home = try? apiClient.fetchNews(team: prediction.homeTeamAbbreviation, limit: 3)
-        async let away = try? apiClient.fetchNews(team: prediction.awayTeamAbbreviation, limit: 3)
-
-        homeNews = await home ?? []
-        awayNews = await away ?? []
+        // News functionality not implemented in current API
+        homeNews = []
+        awayNews = []
         loadingNews = false
     }
 }
@@ -679,7 +675,7 @@ struct TeamPickerSheet: View {
                         VStack(alignment: .leading) {
                             Text(team.name)
                                 .font(.headline)
-                            Text("\(team.conference.uppercased()) \(team.division.capitalized)")
+                            Text(team.displayName ?? team.abbreviation)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -712,10 +708,10 @@ struct UpcomingGameCard: View {
         VStack(spacing: 8) {
             // Date and time
             VStack(spacing: 2) {
-                Text(game.scheduledDate, style: .date)
+                Text(game.date, style: .date)
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                Text(game.scheduledDate, style: .time)
+                Text(game.date, style: .time)
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }

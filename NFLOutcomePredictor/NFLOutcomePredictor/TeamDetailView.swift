@@ -218,7 +218,7 @@ struct GameCardView: View {
                     .foregroundColor(result.hasPrefix("W") ? .green : result.hasPrefix("L") ? .red : .orange)
                     .frame(width: 70, alignment: .trailing)
             } else {
-                Text(game.scheduledDate, style: .date)
+                Text(game.date, style: .date)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -261,10 +261,9 @@ struct NewsCardView: View {
 #Preview {
     NavigationStack {
         TeamDetailView(team: TeamDTO(
-            abbreviation: "KC",
+            id: "kc",
             name: "Kansas City Chiefs",
-            conference: "afc",
-            division: "west"
+            abbreviation: "KC"
         ))
     }
 }
