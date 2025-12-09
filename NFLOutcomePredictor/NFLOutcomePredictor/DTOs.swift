@@ -7,16 +7,86 @@ import Foundation
 
 /// Simplified team representation for API responses.
 public struct TeamDTO: Codable, Sendable {
-    public let abbreviation: String
+    public let id: String
     public let name: String
-    public let conference: String
-    public let division: String
+    public let abbreviation: String
+    public let displayName: String?
+    public let color: String?
+    public let alternateColor: String?
+    public let logo: String?
 
-    public init(abbreviation: String, name: String, conference: String, division: String) {
-        self.abbreviation = abbreviation
+    public init(
+        id: String,
+        name: String,
+        abbreviation: String,
+        displayName: String? = nil,
+        color: String? = nil,
+        alternateColor: String? = nil,
+        logo: String? = nil
+    ) {
+        self.id = id
         self.name = name
+        self.abbreviation = abbreviation
+        self.displayName = displayName
+        self.color = color
+        self.alternateColor = alternateColor
+        self.logo = logo
+    }
+}
+
+/// Detailed team information including record and next game.
+public struct TeamDetail: Codable, Sendable {
+    public let id: String
+    public let name: String
+    public let abbreviation: String
+    public let displayName: String?
+    public let color: String?
+    public let alternateColor: String?
+    public let logo: String?
+    public let conference: String?
+    public let division: String?
+    public let record: TeamRecord?
+    public let nextGame: Game?
+
+    public init(
+        id: String,
+        name: String,
+        abbreviation: String,
+        displayName: String? = nil,
+        color: String? = nil,
+        alternateColor: String? = nil,
+        logo: String? = nil,
+        conference: String? = nil,
+        division: String? = nil,
+        record: TeamRecord? = nil,
+        nextGame: Game? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.abbreviation = abbreviation
+        self.displayName = displayName
+        self.color = color
+        self.alternateColor = alternateColor
+        self.logo = logo
         self.conference = conference
         self.division = division
+        self.record = record
+        self.nextGame = nextGame
+    }
+}
+
+/// Team win-loss record.
+public struct TeamRecord: Codable, Sendable {
+    public let wins: Int?
+    public let losses: Int?
+    public let ties: Int?
+    public let winPercentage: Double?
+
+    public init(wins: Int? = nil, losses: Int? = nil, ties: Int? = nil, winPercentage: Double? = nil) {
+        self.wins = wins
+        self.losses = losses
+        self.ties = ties
+        self.winPercentage = winPercentage
     }
 }
 
@@ -27,35 +97,51 @@ public struct GameDTO: Codable, Sendable {
     public let id: String
     public let homeTeam: TeamDTO
     public let awayTeam: TeamDTO
-    public let scheduledDate: Date
-    public let week: Int
-    public let season: Int
+    public let date: Date
+    public let week: Int?
+    public let season: Int?
     public let homeScore: Int?
     public let awayScore: Int?
-    public let winner: String? // "home", "away", or "tie"
+    public let status: String?
 
     public init(
         id: String,
         homeTeam: TeamDTO,
         awayTeam: TeamDTO,
-        scheduledDate: Date,
-        week: Int,
-        season: Int,
+        date: Date,
+        week: Int? = nil,
+        season: Int? = nil,
         homeScore: Int? = nil,
         awayScore: Int? = nil,
-        winner: String? = nil
+        status: String? = nil
     ) {
         self.id = id
         self.homeTeam = homeTeam
         self.awayTeam = awayTeam
-        self.scheduledDate = scheduledDate
+        self.date = date
         self.week = week
         self.season = season
         self.homeScore = homeScore
         self.awayScore = awayScore
-        self.winner = winner
+        self.status = status
     }
 }
+
+/// Game with prediction information.
+public struct GamePrediction: Codable, Sendable {
+    public let game: GameDTO
+    public let prediction: PredictionResult?
+    public let odds: GameOdds?
+
+    public init(game: GameDTO, prediction: PredictionResult? = nil, odds: GameOdds? = nil) {
+        self.game = game
+        self.prediction = prediction
+        self.odds = odds
+    }
+}
+
+/// Basic game information (alias for compatibility).
+public typealias Game = GameDTO
 
 // MARK: - Article DTO
 
@@ -85,7 +171,65 @@ public struct ArticleDTO: Codable, Sendable {
     }
 }
 
-// MARK: - Prediction DTO
+// MARK: - Prediction DTOs
+
+/// Prediction result for API responses.
+public struct PredictionResult: Codable, Sendable {
+    public let predictedWinner: String
+    public let confidence: Double
+    public let reasoning: String?
+    public let modelVersion: String?
+
+    public init(
+        predictedWinner: String,
+        confidence: Double,
+        reasoning: String? = nil,
+        modelVersion: String? = nil
+    ) {
+        self.predictedWinner = predictedWinner
+        self.confidence = confidence
+        self.reasoning = reasoning
+        self.modelVersion = modelVersion
+    }
+}
+
+/// Game odds information.
+public struct GameOdds: Codable, Sendable {
+    public let homeTeamOdds: Double?
+    public let awayTeamOdds: Double?
+    public let spread: Double?
+    public let overUnder: Double?
+    public let lastUpdated: Date?
+
+    public init(
+        homeTeamOdds: Double? = nil,
+        awayTeamOdds: Double? = nil,
+        spread: Double? = nil,
+        overUnder: Double? = nil,
+        lastUpdated: Date? = nil
+    ) {
+        self.homeTeamOdds = homeTeamOdds
+        self.awayTeamOdds = awayTeamOdds
+        self.spread = spread
+        self.overUnder = overUnder
+        self.lastUpdated = lastUpdated
+    }
+}
+
+/// Current week response with games and metadata.
+public struct CurrentWeekResponse: Codable, Sendable {
+    public let week: Int
+    public let season: Int
+    public let games: [GamePrediction]
+    public let lastUpdated: Date?
+
+    public init(week: Int, season: Int, games: [GamePrediction], lastUpdated: Date? = nil) {
+        self.week = week
+        self.season = season
+        self.games = games
+        self.lastUpdated = lastUpdated
+    }
+}
 
 /// Prediction result for API responses.
 public struct PredictionDTO: Codable, Sendable {

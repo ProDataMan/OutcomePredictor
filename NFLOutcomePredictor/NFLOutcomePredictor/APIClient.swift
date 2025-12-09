@@ -34,7 +34,7 @@ final class APIClient: ObservableObject {
         }
     }
 
-    /// Fetches upcoming NFL games.
+    /// Fetches upcoming NFL games with predictions.
     func fetchUpcomingGames() async throws -> [GameDTO] {
         do {
             let url = URL(string: "\(baseURL)/upcoming")!
@@ -46,26 +46,26 @@ final class APIClient: ObservableObject {
         }
     }
 
-    /// Fetches games for a specific team and season.
-    func fetchGames(team: String, season: Int) async throws -> [GameDTO] {
+    /// Fetches current week games and scores.
+    func fetchCurrentWeekGames() async throws -> CurrentWeekResponse {
         do {
-            let url = URL(string: "\(baseURL)/games?team=\(team)&season=\(season)")!
+            let url = URL(string: "\(baseURL)/current-week")!
             let (data, _) = try await URLSession.shared.data(from: url)
-            return try decoder.decode([GameDTO].self, from: data)
+            return try decoder.decode(CurrentWeekResponse.self, from: data)
         } catch {
-            ErrorHandler.shared.handle(error, context: "Failed to fetch games for \(team) season \(season)")
+            ErrorHandler.shared.handle(error, context: "Failed to fetch current week games")
             throw error
         }
     }
 
-    /// Fetches news articles for a specific team.
-    func fetchNews(team: String, limit: Int = 10) async throws -> [ArticleDTO] {
+    /// Fetches detailed team information.
+    func fetchTeamDetails(teamId: String) async throws -> TeamDetail {
         do {
-            let url = URL(string: "\(baseURL)/news?team=\(team)&limit=\(limit)")!
+            let url = URL(string: "\(baseURL)/teams/\(teamId)")!
             let (data, _) = try await URLSession.shared.data(from: url)
-            return try decoder.decode([ArticleDTO].self, from: data)
+            return try decoder.decode(TeamDetail.self, from: data)
         } catch {
-            ErrorHandler.shared.handle(error, context: "Failed to fetch news for \(team)")
+            ErrorHandler.shared.handle(error, context: "Failed to fetch team details for \(teamId)")
             throw error
         }
     }
@@ -73,31 +73,12 @@ final class APIClient: ObservableObject {
     /// Makes a prediction for a game between two teams.
     func makePrediction(
         home: String,
-        away: String,
-        season: Int,
-        week: Int? = nil
-    ) async throws -> PredictionDTO {
+        away: String
+    ) async throws -> PredictionResult {
         do {
-            let url = URL(string: "\(baseURL)/predictions")!
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let body = PredictionRequest(
-                homeTeamAbbreviation: home,
-                awayTeamAbbreviation: away,
-                scheduledDate: nil,
-                week: week,
-                season: season
-            )
-
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            encoder.keyEncodingStrategy = .convertToSnakeCase
-            request.httpBody = try encoder.encode(body)
-
-            let (data, _) = try await URLSession.shared.data(for: request)
-            return try decoder.decode(PredictionDTO.self, from: data)
+            let url = URL(string: "\(baseURL)/predict/\(home)/\(away)")!
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return try decoder.decode(PredictionResult.self, from: data)
         } catch {
             ErrorHandler.shared.handle(error, context: "Failed to make prediction for \(away) @ \(home)")
             throw error

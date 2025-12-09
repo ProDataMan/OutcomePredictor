@@ -40,11 +40,9 @@ struct TeamsListView: View {
     private let conferences = ["All", "NFC", "AFC"]
 
     var filteredTeams: [TeamDTO] {
-        if selectedConference == "All" {
-            return teams.sorted { $0.name < $1.name }
-        }
-        return teams.filter { $0.conference.uppercased() == selectedConference }
-            .sorted { $0.name < $1.name }
+        // Conference filtering not available with basic TeamDTO
+        // All teams shown for now
+        return teams.sorted { $0.name < $1.name }
     }
 
     var body: some View {

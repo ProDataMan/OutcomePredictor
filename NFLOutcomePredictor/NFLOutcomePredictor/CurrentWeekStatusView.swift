@@ -68,7 +68,7 @@ struct CurrentWeekStatusView: View {
             let games = try await apiClient.fetchUpcomingGames()
             if let firstGame = games.first {
                 currentWeek = firstGame.week
-                currentSeason = firstGame.season
+                currentSeason = firstGame.season ?? Calendar.current.component(.year, from: Date())
             }
         } catch {
             // If we can't fetch games, just show the season

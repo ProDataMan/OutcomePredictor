@@ -104,7 +104,14 @@ struct TeamDetailView: View {
     private func loadGames() async {
         isLoadingGames = true
         do {
-            games = try await apiClient.fetchGames(team: team.abbreviation, season: selectedSeason)
+            // Use the team details endpoint instead of team-specific games
+            // For now, show upcoming games as a fallback
+            let upcomingGames = try await apiClient.fetchUpcomingGames()
+            // Filter games that involve this team
+            games = upcomingGames.filter { game in
+                game.homeTeam.abbreviation == team.abbreviation ||
+                game.awayTeam.abbreviation == team.abbreviation
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -113,11 +120,9 @@ struct TeamDetailView: View {
 
     private func loadNews() async {
         isLoadingNews = true
-        do {
-            news = try await apiClient.fetchNews(team: team.abbreviation, limit: 5)
-        } catch {
-            self.error = error.localizedDescription
-        }
+        // News functionality not implemented in current API
+        // Leave news array empty for now
+        news = []
         isLoadingNews = false
     }
 }
