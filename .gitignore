@@ -1,16 +1,135 @@
-.DS_Store
-/.build
-/Packages
-xcuserdata/
+# Build artifacts
+.build/
+/build/
 DerivedData/
-.swiftpm/configuration/registries.json
-.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
-.netrc
 
-# Environment variables (DO NOT commit)
-.env.local
+# Swift Package Manager
+Package.resolved
+.swiftpm/
+
+# Xcode
+*.xcodeproj
+!*.xcodeproj/*.pbxproj
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/contents.xcworkspacedata
+/xcuserdata
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+*.xcscheme
+!*.xcscheme
+
+# CocoaPods
+Pods/
+*.podspec.lock
+
+# Environment variables
 .env
 *.env
+.env.local
+.env.production
+.env.development
+
+# Logs
+*.log
+logs/
+deployment.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Development notes and checklists (not for production)
+*_CHECKLIST.md
+*_GUIDE.md
+*_TODO.md
+*_NOTES.md
+*_STATUS.md
+MARKET_RESEARCH.md
+PREDICTION_DATABASE_DESIGN.md
+CONFIDENCE_CALCULATION.md
+UI_IMPROVEMENTS.md
+VERSION_*_ROADMAP.md
+RECENT_CHANGES.md
+DEPLOYMENT_STATUS.md
+READY_TO_LAUNCH.md
+SCORE_PREDICTIONS_TODO.md
+ASYNCHTTPCLIENT_MIGRATION.md
+
+# App Store specific files
+APP_STORE_*.md
+STATSHARK_*.md
+PRIVACY_POLICY*.md
+
+# Build and deployment scripts (development only)
+create_*.sh
+generate-*.sh
+automate_*.scpt
+check-*.sh
+test-*.sh
+test-*.swift
+run-*.sh
+verify_*.sh
+
+# iOS specific development files
+BUILD_*.md
+XCODE_*.md
+iOS_*.md
+*_SUMMARY.md
+*_COMPLETE_GUIDE.md
+ADD_PACKAGE_GUIDE.md
+APP_ICON_GUIDE.md
+*_ENHANCEMENTS.md
+*_FEATURE.md
+UPCOMING_GAMES_FEATURE.md
+PREDICTION_ENHANCEMENTS.md
+UPDATE_SUMMARY.md
+
+# Temporary data files
+*.json
+!Package.resolved
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Azure deployment (use docs/deployment instead)
+AZURE_*.md
+AWS_*.md
+
+# Development setup files
+SETUP.md
+QUICKSTART.md
+BUILD_*.md
 
 # iOS App Build
 NFLOutcomePredictor/.build/

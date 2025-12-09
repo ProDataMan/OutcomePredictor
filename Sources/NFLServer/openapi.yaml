@@ -1,0 +1,397 @@
+openapi: 3.1.0
+info:
+  title: StatShark NFL Prediction API
+  description: |
+    StatShark provides AI-powered NFL game predictions using real-time data from ESPN and odds from The Odds API.
+
+    This API offers comprehensive NFL data including team information, upcoming games, current scores,
+    and AI-generated predictions with confidence ratings.
+  version: 1.0.0
+  contact:
+    name: StatShark API Support
+    url: https://github.com/ProDataMan/OutcomePredictor
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://statshark-api.azurewebsites.net/api/v1
+    description: Production server
+  - url: http://localhost:8080/api/v1
+    description: Development server
+
+paths:
+  /teams:
+    get:
+      summary: Get all NFL teams
+      description: Returns a list of all NFL teams with their basic information
+      operationId: getTeams
+      tags:
+        - Teams
+      responses:
+        '200':
+          description: List of NFL teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Team'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /teams/{teamId}:
+    get:
+      summary: Get team details
+      description: Returns detailed information about a specific NFL team
+      operationId: getTeamById
+      tags:
+        - Teams
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          description: NFL team identifier
+          schema:
+            type: string
+            example: "KC"
+      responses:
+        '200':
+          description: Team details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /upcoming:
+    get:
+      summary: Get upcoming games
+      description: Returns a list of upcoming NFL games with prediction data
+      operationId: getUpcomingGames
+      tags:
+        - Games
+      responses:
+        '200':
+          description: List of upcoming games with predictions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GamePrediction'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /current-week:
+    get:
+      summary: Get current week games
+      description: Returns games for the current NFL week with live scores and predictions
+      operationId: getCurrentWeekGames
+      tags:
+        - Games
+      responses:
+        '200':
+          description: Current week games with scores and predictions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentWeekResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /predict/{homeTeam}/{awayTeam}:
+    get:
+      summary: Predict game outcome
+      description: Generate AI prediction for a specific matchup between two teams
+      operationId: predictGame
+      tags:
+        - Predictions
+      parameters:
+        - name: homeTeam
+          in: path
+          required: true
+          description: Home team identifier
+          schema:
+            type: string
+            example: "KC"
+        - name: awayTeam
+          in: path
+          required: true
+          description: Away team identifier
+          schema:
+            type: string
+            example: "BUF"
+      responses:
+        '200':
+          description: Game prediction with confidence rating
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    Team:
+      type: object
+      required:
+        - id
+        - name
+        - abbreviation
+      properties:
+        id:
+          type: string
+          description: Team identifier
+          example: "KC"
+        name:
+          type: string
+          description: Full team name
+          example: "Kansas City Chiefs"
+        abbreviation:
+          type: string
+          description: Team abbreviation
+          example: "KC"
+        displayName:
+          type: string
+          description: Team display name
+          example: "Chiefs"
+        color:
+          type: string
+          description: Primary team color (hex)
+          example: "#E31837"
+        alternateColor:
+          type: string
+          description: Secondary team color (hex)
+          example: "#FFB81C"
+        logo:
+          type: string
+          description: Team logo URL
+          example: "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png"
+
+    TeamDetail:
+      allOf:
+        - $ref: '#/components/schemas/Team'
+        - type: object
+          properties:
+            conference:
+              type: string
+              description: Team conference
+              example: "AFC"
+            division:
+              type: string
+              description: Team division
+              example: "West"
+            record:
+              $ref: '#/components/schemas/TeamRecord'
+            nextGame:
+              $ref: '#/components/schemas/Game'
+
+    TeamRecord:
+      type: object
+      properties:
+        wins:
+          type: integer
+          example: 9
+        losses:
+          type: integer
+          example: 3
+        ties:
+          type: integer
+          example: 0
+        winPercentage:
+          type: number
+          format: double
+          example: 0.750
+
+    Game:
+      type: object
+      required:
+        - id
+        - homeTeam
+        - awayTeam
+        - date
+      properties:
+        id:
+          type: string
+          description: Game identifier
+          example: "401671716"
+        homeTeam:
+          $ref: '#/components/schemas/Team'
+        awayTeam:
+          $ref: '#/components/schemas/Team'
+        date:
+          type: string
+          format: date-time
+          description: Game date and time
+          example: "2024-12-15T20:00:00Z"
+        week:
+          type: integer
+          description: NFL week number
+          example: 15
+        season:
+          type: integer
+          description: NFL season year
+          example: 2024
+        homeScore:
+          type: integer
+          description: Home team score (if game completed)
+          example: 21
+        awayScore:
+          type: integer
+          description: Away team score (if game completed)
+          example: 14
+        status:
+          type: string
+          description: Game status
+          enum: ["scheduled", "in_progress", "completed", "postponed"]
+          example: "completed"
+
+    GamePrediction:
+      allOf:
+        - $ref: '#/components/schemas/Game'
+        - type: object
+          properties:
+            prediction:
+              $ref: '#/components/schemas/PredictionResult'
+            odds:
+              $ref: '#/components/schemas/GameOdds'
+
+    PredictionResult:
+      type: object
+      required:
+        - predictedWinner
+        - confidence
+      properties:
+        predictedWinner:
+          type: string
+          description: Predicted winning team ID
+          example: "KC"
+        confidence:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Prediction confidence (0-1)
+          example: 0.73
+        reasoning:
+          type: string
+          description: AI reasoning for the prediction
+          example: "Kansas City has strong offensive performance and home field advantage"
+        modelVersion:
+          type: string
+          description: Prediction model version
+          example: "baseline-v1"
+
+    GameOdds:
+      type: object
+      properties:
+        homeTeamOdds:
+          type: number
+          format: double
+          description: Home team moneyline odds
+          example: -150
+        awayTeamOdds:
+          type: number
+          format: double
+          description: Away team moneyline odds
+          example: 130
+        spread:
+          type: number
+          format: double
+          description: Point spread (positive favors away team)
+          example: -3.5
+        overUnder:
+          type: number
+          format: double
+          description: Total points over/under
+          example: 47.5
+        lastUpdated:
+          type: string
+          format: date-time
+          description: When odds were last updated
+          example: "2024-12-15T18:00:00Z"
+
+    CurrentWeekResponse:
+      type: object
+      required:
+        - week
+        - season
+        - games
+      properties:
+        week:
+          type: integer
+          description: Current NFL week number
+          example: 15
+        season:
+          type: integer
+          description: Current NFL season year
+          example: 2024
+        games:
+          type: array
+          items:
+            $ref: '#/components/schemas/GamePrediction'
+        lastUpdated:
+          type: string
+          format: date-time
+          description: When data was last refreshed
+          example: "2024-12-15T19:30:00Z"
+
+    APIError:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "ValidationError"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid team identifier provided"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/APIError'
+
+  securitySchemes: {}
+
+tags:
+  - name: Teams
+    description: NFL team information and details
+  - name: Games
+    description: NFL games, scores, and schedules
+  - name: Predictions
+    description: AI-powered game predictions
