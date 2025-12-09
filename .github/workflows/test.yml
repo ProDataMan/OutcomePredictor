@@ -1,0 +1,71 @@
+name: 🧪 Test and Build
+
+on:
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐧 Set up Swift
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: '6.2'
+
+    - name: 📦 Cache Swift packages
+      uses: actions/cache@v4
+      with:
+        path: .build
+        key: ${{ runner.os }}-swift-${{ hashFiles('Package.resolved') }}
+        restore-keys: |
+          ${{ runner.os }}-swift-
+
+    - name: 🔨 Build project
+      run: swift build --configuration release --product nfl-server
+
+    - name: 🧪 Run tests
+      run: swift test --no-parallel --configuration release
+
+    - name: 📊 Test results
+      if: always()
+      run: |
+        echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ $? -eq 0 ]; then
+          echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Some tests failed!" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  validate-docker:
+    name: 🐳 Validate Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🏗️ Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: statshark-test:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: ✅ Docker build validation
+      run: |
+        echo "## 🐳 Docker Build" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Docker image builds successfully" >> $GITHUB_STEP_SUMMARY

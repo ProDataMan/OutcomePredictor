@@ -6,3 +6,13 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 .netrc
+
+# Environment variables (DO NOT commit)
+.env.local
+.env
+*.env
+
+# iOS App Build
+NFLOutcomePredictor/.build/
+NFLOutcomePredictor/xcuserdata/
+NFLOutcomePredictor/DerivedData/

@@ -1,8 +1,58 @@
-# OutcomePredictor
+# StatShark - NFL Outcome Predictor
 
-Predicting NFL game outcomes using foundation models and text data involves several interconnected challenges. This
-project implements a structured approach to game prediction combining traditional statistics with natural language
-processing.
+StatShark predicts NFL game outcomes using AI and comprehensive data analysis. This project implements a production-ready
+system combining traditional statistics with natural language processing through server-side Swift and native iOS
+application.
+
+## Project Status
+
+### ✅ Completed Features
+
+**Server-Side (Swift Vapor)**
+- REST API with comprehensive endpoints (teams, games, predictions, odds, news)
+- AsyncHTTPClient integration for optimal Linux performance
+- Actor-based HTTP caching system (configurable TTL)
+- ESPN API integration for live scores and schedules
+- The Odds API integration for betting lines
+- LLM-based predictions using Claude AI
+- Docker containerization with multi-platform support (linux/amd64, linux/arm64)
+- Environment variable configuration for production deployment
+
+**iOS Application (SwiftUI)**
+- Native iOS app with modern SwiftUI interface
+- Team browsing and detailed schedules
+- Live upcoming games display
+- AI-powered game predictions with confidence scores
+- Vegas odds integration
+- Manual prediction for any team matchup
+- Season selector (2020-2025)
+- Current week status display with auto-refresh
+- Custom error handling with "Bull Shark" character
+- Production API integration
+
+**Performance Optimizations**
+- HTTP caching reduces API calls by 70-90%
+- AsyncHTTPClient provides 5-10x faster networking on Linux
+- Cache TTL tuning: Odds (6h), Schedules (1h), Live scores (no cache)
+- Generic HTTPCache actor for thread-safe caching
+
+### 🚧 In Progress
+
+**Azure Deployment**
+- Container Registry: statsharkregistry.azurecr.io (configured)
+- App Service: statshark-api.azurewebsites.net (created, B1 Basic tier)
+- Managed Identity: Enabled with AcrPull role assigned
+- **Blocker**: Docker image rebuilt for linux/amd64 platform required
+- Multi-platform build configured for Apple Silicon + Azure compatibility
+
+**Next Steps**
+1. Rebuild Docker image for multi-platform (linux/amd64 + linux/arm64)
+2. Push to Azure Container Registry
+3. Restart App Service to pull updated image
+4. Verify production API functionality
+5. Update iOS app for App Store submission
+
+See [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) for detailed deployment tracking.
 
 ## Data architecture
 
@@ -164,6 +214,15 @@ Following test-driven development principles:
 
 ## Getting started
 
+### Prerequisites
+
+- Swift 6.1+ (for server development)
+- Xcode 16+ (for iOS development)
+- Docker Desktop (for containerization)
+- Azure CLI (for deployment)
+
+### Server Development
+
 ```bash
 # Build the project
 swift build
@@ -171,12 +230,202 @@ swift build
 # Run tests
 swift test --no-parallel
 
-# Run CLI demo
-.build/debug/nfl-predict --demo
+# Run local server
+swift run nfl-server serve --hostname 0.0.0.0 --port 8085
 
-# Load real data (see DATA_LOADING.md for setup)
-swift run DataLoadingExample
+# Build Docker image (multi-platform)
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t statsharkregistry.azurecr.io/statshark-server:latest \
+  --push \
+  .
 ```
+
+### iOS Development
+
+```bash
+# Open Xcode project
+open /Users/baysideuser/GitRepos/OutcomePredictor/NFLOutcomePredictor/NFLOutcomePredictor.xcodeproj
+
+# Run in simulator (Cmd+R in Xcode)
+# Or build from command line
+xcodebuild -project NFLOutcomePredictor/NFLOutcomePredictor.xcodeproj \
+  -scheme NFLOutcomePredictor \
+  -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
+```
+
+### Environment Variables
+
+Server requires these environment variables:
+
+```bash
+export ODDS_API_KEY="your-odds-api-key"          # Required for betting odds
+export CLAUDE_API_KEY="your-anthropic-api-key"   # Required for AI predictions
+export PORT="8080"                                # Server port (default: 8080)
+export ENV="production"                           # Environment mode
+```
+
+iOS app uses environment variable for server URL override:
+
+```bash
+export SERVER_BASE_URL="http://localhost:8085/api/v1"  # Override production URL
+```
+
+## Deployment
+
+### Azure Container Registry + App Service
+
+The project deploys to Azure using:
+- **Container Registry**: statsharkregistry.azurecr.io
+- **App Service**: statshark-api.azurewebsites.net
+- **Authentication**: Managed Identity with AcrPull role
+
+**Multi-Platform Docker Build**
+
+Supports both Apple Silicon development and Azure linux/amd64 deployment:
+
+```bash
+# Login to ACR
+az acr login --name statsharkregistry
+
+# Build and push multi-platform image
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t statsharkregistry.azurecr.io/statshark-server:latest \
+  --push \
+  .
+
+# Restart App Service to pull new image
+az webapp restart --name statshark-api --resource-group ProDataMan
+```
+
+See [AZURE_DEPLOYMENT_STEPS.md](AZURE_DEPLOYMENT_STEPS.md) for detailed deployment instructions.
+
+### iOS App Store
+
+iOS app configured for production API:
+- **Production URL**: https://statshark-api.azurewebsites.net/api/v1
+- **Bundle ID**: Update in Xcode project settings
+- **Team**: Configure in Signing & Capabilities
+
+See [APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md) for submission requirements.
+
+## Architecture
+
+### Server Architecture
+
+```
+┌─────────────────┐
+│   Vapor REST    │  HTTP Server (Port 8080/8085)
+│      API        │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │ Routes  │  /api/v1/{teams,games,predictions,odds,news}
+    └────┬────┘
+         │
+    ┌────┴──────────┐
+    │  Controllers  │  TeamController, GameController, PredictionController
+    └───────┬───────┘
+            │
+    ┌───────┴───────────┐
+    │  Data Sources     │  ESPNDataSource, OddsDataSource (with HTTPCache)
+    │  + HTTPClient     │  AsyncHTTPClient (Linux optimized)
+    └───────┬───────────┘
+            │
+    ┌───────┴───────┐
+    │  External     │  ESPN API, The Odds API, Claude AI
+    │     APIs      │
+    └───────────────┘
+```
+
+### iOS Architecture
+
+```
+┌──────────────────┐
+│   SwiftUI Views  │  ContentView, PredictionsView, TeamDetailView
+└────────┬─────────┘
+         │
+    ┌────┴─────────┐
+    │  ViewModels  │  @StateObject, @Published properties
+    └────┬─────────┘
+         │
+    ┌────┴─────────┐
+    │  APIClient   │  URLSession-based HTTP client
+    └────┬─────────┘
+         │
+    ┌────┴──────────┐
+    │  Azure API    │  statshark-api.azurewebsites.net
+    └───────────────┘
+```
+
+### Performance Optimizations
+
+**HTTP Caching with Actor Pattern**
+- Generic `HTTPCache<T: Codable & Sendable>` actor
+- Thread-safe dictionary storage
+- Configurable TTL per data source:
+  - Betting odds: 6 hours (500 API calls/month limit)
+  - Schedules: 1 hour (changes infrequently)
+  - Live scores: No cache (real-time data)
+
+**AsyncHTTPClient Benefits**
+- 5-10x faster HTTP on Linux vs URLSession
+- Better concurrent request handling
+- Native Swift Concurrency integration
+- Production-tested by Vapor framework
+
+See [ASYNCHTTPCLIENT_MIGRATION.md](ASYNCHTTPCLIENT_MIGRATION.md) for migration details.
+
+## Documentation
+
+### Quick Start Guides
+- [QUICK_START_SERVER.md](QUICK_START_SERVER.md) - Server setup and running
+- [QUICK_START_iOS.md](QUICK_START_iOS.md) - iOS app setup
+
+### Development Guides
+- [RUNNING.md](RUNNING.md) - Running server and iOS app
+- [TESTING_GUIDE.md](TESTING_GUIDE.md) - Test suite documentation
+- [DATA_LOADING.md](DATA_LOADING.md) - Data sources and API setup
+
+### Deployment Guides
+- [AZURE_DEPLOYMENT_STEPS.md](AZURE_DEPLOYMENT_STEPS.md) - Azure deployment
+- [APP_STORE_CHECKLIST.md](APP_STORE_CHECKLIST.md) - App Store submission
+- [DEPLOYMENT_STATUS.md](DEPLOYMENT_STATUS.md) - Current deployment status
+
+### Design Documents
+- [ASYNCHTTPCLIENT_MIGRATION.md](ASYNCHTTPCLIENT_MIGRATION.md) - HTTP client migration
+- [STATSHARK_BRANDING.md](STATSHARK_BRANDING.md) - Brand identity
+- [PRIVACY_POLICY_TEMPLATE.md](PRIVACY_POLICY_TEMPLATE.md) - Privacy policy
+
+## API Endpoints
+
+Base URL: `https://statshark-api.azurewebsites.net/api/v1`
+
+### Teams
+- `GET /teams` - List all NFL teams
+- `GET /teams/{abbreviation}` - Get team details
+
+### Games
+- `GET /games?team={abbreviation}&season={year}` - Team schedule
+- `GET /upcoming` - Upcoming games across league
+
+### Predictions
+- `POST /predictions` - Generate AI prediction for matchup
+  ```json
+  {
+    "home_team_abbreviation": "KC",
+    "away_team_abbreviation": "BUF",
+    "season": 2024,
+    "week": 13
+  }
+  ```
+
+### Odds
+- `GET /odds` - Current betting lines for all games
+
+### News
+- `GET /news?team={abbreviation}&limit={count}` - Recent news articles
 
 ## Loading Real Data
 

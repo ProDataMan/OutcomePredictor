@@ -1,0 +1,10 @@
+🦈 StatShark - Azure Deployment Script
+=======================================
+
+📋 Checking prerequisites...
+✅ Prerequisites OK
+
+🔐 Checking Azure login status...
+✅ Logged in to: Visual Studio Enterprise Subscription
+
+⚠️  ODDS_API_KEY environment variable not set

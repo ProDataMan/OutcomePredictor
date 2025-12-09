@@ -159,6 +159,12 @@ public struct Prediction: Codable, Sendable {
     /// Confidence in the prediction (0.0 to 1.0).
     public let confidence: Double
 
+    /// Predicted home team score.
+    public let predictedHomeScore: Int?
+
+    /// Predicted away team score.
+    public let predictedAwayScore: Int?
+
     /// Human-readable reasoning for the prediction.
     public let reasoning: String
 
@@ -187,6 +193,8 @@ public struct Prediction: Codable, Sendable {
     ///   - game: Game to predict.
     ///   - homeWinProbability: Probability home team wins (0.0-1.0).
     ///   - confidence: Confidence level (0.0-1.0).
+    ///   - predictedHomeScore: Predicted final score for home team.
+    ///   - predictedAwayScore: Predicted final score for away team.
     ///   - reasoning: Explanation of the prediction.
     ///   - timestamp: When prediction was made. Defaults to current time.
     /// - Throws: `PredictionError.invalidProbability` if probability is out of range.
@@ -194,6 +202,8 @@ public struct Prediction: Codable, Sendable {
         game: Game,
         homeWinProbability: Double,
         confidence: Double,
+        predictedHomeScore: Int? = nil,
+        predictedAwayScore: Int? = nil,
         reasoning: String,
         timestamp: Date = Date()
     ) throws {
@@ -207,6 +217,8 @@ public struct Prediction: Codable, Sendable {
         self.game = game
         self.homeWinProbability = homeWinProbability
         self.confidence = confidence
+        self.predictedHomeScore = predictedHomeScore
+        self.predictedAwayScore = predictedAwayScore
         self.reasoning = reasoning
         self.timestamp = timestamp
     }
@@ -272,6 +284,9 @@ public struct Article: Identifiable, Codable, Sendable {
     /// Teams mentioned in the article.
     public let teams: [Team]
 
+    /// URL to original article.
+    public let url: String?
+
     /// Creates a new article.
     ///
     /// - Parameters:
@@ -281,13 +296,15 @@ public struct Article: Identifiable, Codable, Sendable {
     ///   - publishedDate: Publication date.
     ///   - source: Source name.
     ///   - teams: Teams mentioned.
+    ///   - url: Original article URL.
     public init(
         id: UUID = UUID(),
         title: String,
         content: String,
         publishedDate: Date,
         source: String,
-        teams: [Team]
+        teams: [Team],
+        url: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -295,5 +312,6 @@ public struct Article: Identifiable, Codable, Sendable {
         self.publishedDate = publishedDate
         self.source = source
         self.teams = teams
+        self.url = url
     }
 }

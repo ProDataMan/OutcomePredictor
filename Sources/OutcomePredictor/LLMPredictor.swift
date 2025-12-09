@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// LLM-based predictor using foundation models for game outcome prediction.
 public struct LLMPredictor: GamePredictor {
@@ -285,7 +288,7 @@ public struct ClaudeAPIClient: LLMClient {
         }
 
         guard httpResponse.statusCode == 200 else {
-            throw URLError(.init(rawValue: httpResponse.statusCode))
+            throw URLError(.badServerResponse)
         }
 
         // Parse Claude response

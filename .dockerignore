@@ -1,0 +1,26 @@
+# Exclude tests from Docker build
+Tests/
+
+# Exclude build artifacts
+.build/
+.swiftpm/
+
+# Exclude Git
+.git/
+.gitignore
+
+# Exclude documentation
+*.md
+
+# Exclude iOS app
+NFLOutcomePredictor/
+iOSAppFiles/
+
+# Exclude example/debug data
+*.json
+*.sh
+
+# Exclude deployment files
+deploy-to-azure.sh
+Dockerfile
+.dockerignore

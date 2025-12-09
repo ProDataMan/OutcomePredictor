@@ -50,9 +50,22 @@ public struct BaselinePredictor: GamePredictor {
         // Clamp probability to valid range
         homeWinProbability = max(0.0, min(1.0, homeWinProbability))
 
-        // Calculate confidence based on sample size
-        let totalGames = completedHomeGames.count + completedAwayGames.count
-        let confidence = min(1.0, Double(totalGames) / 20.0)
+        // Calculate confidence based on multiple factors
+        let confidence = calculateConfidence(
+            homeWinProbability: homeWinProbability,
+            totalGames: completedHomeGames.count + completedAwayGames.count,
+            homeGamesCount: completedHomeGames.count,
+            awayGamesCount: completedAwayGames.count
+        )
+
+        // Calculate predicted scores based on team averages
+        let homeAvgScore = calculateAverageScore(for: game.homeTeam, from: completedHomeGames)
+        let awayAvgScore = calculateAverageScore(for: game.awayTeam, from: completedAwayGames)
+
+        // Adjust scores based on win probability
+        let scoreDiff = Int((homeWinProbability - 0.5) * 14.0) // ~7 point swing per 25% prob
+        let predictedHomeScore = homeAvgScore + scoreDiff
+        let predictedAwayScore = awayAvgScore - scoreDiff
 
         let reasoning = """
         Baseline prediction based on historical win rates:
@@ -66,6 +79,8 @@ public struct BaselinePredictor: GamePredictor {
             game: game,
             homeWinProbability: homeWinProbability,
             confidence: confidence,
+            predictedHomeScore: predictedHomeScore,
+            predictedAwayScore: predictedAwayScore,
             reasoning: reasoning
         )
     }
@@ -85,6 +100,55 @@ public struct BaselinePredictor: GamePredictor {
         }.count
 
         return Double(wins) / Double(games.count)
+    }
+
+    private func calculateAverageScore(for team: Team, from games: [Game]) -> Int {
+        let recentGames = Array(games.suffix(5)) // Last 5 games
+        let scores = recentGames.compactMap { game -> Int? in
+            guard let outcome = game.outcome else { return nil }
+
+            if game.homeTeam.id == team.id {
+                return outcome.homeScore
+            } else if game.awayTeam.id == team.id {
+                return outcome.awayScore
+            }
+            return nil
+        }
+
+        guard !scores.isEmpty else { return 21 } // Default NFL average
+        return scores.reduce(0, +) / scores.count
+    }
+
+    private func calculateConfidence(
+        homeWinProbability: Double,
+        totalGames: Int,
+        homeGamesCount: Int,
+        awayGamesCount: Int
+    ) -> Double {
+        // Factor 1: Sample size (0.0 to 0.4)
+        // Need sufficient games to be confident
+        let sampleSizeFactor = min(0.4, Double(totalGames) / 50.0)
+
+        // Factor 2: Data balance (0.0 to 0.2)
+        // More confident when both teams have similar sample sizes
+        let minGames = min(homeGamesCount, awayGamesCount)
+        let maxGames = max(homeGamesCount, awayGamesCount)
+        let balanceFactor: Double
+        if maxGames > 0 {
+            balanceFactor = 0.2 * (Double(minGames) / Double(maxGames))
+        } else {
+            balanceFactor = 0.0
+        }
+
+        // Factor 3: Prediction certainty (0.0 to 0.4)
+        // More confident when prediction is decisive (far from 50/50)
+        let distanceFrom50 = abs(homeWinProbability - 0.5)
+        let certaintyFactor = min(0.4, distanceFrom50 * 0.8)
+
+        // Combine factors (max possible: 0.4 + 0.2 + 0.4 = 1.0)
+        let confidence = sampleSizeFactor + balanceFactor + certaintyFactor
+
+        return min(1.0, max(0.0, confidence))
     }
 }
 

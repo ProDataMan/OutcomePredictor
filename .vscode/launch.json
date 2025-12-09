@@ -1,0 +1,84 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Debug nfl-predict",
+            "target": "nfl-predict",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug nfl-predict"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Release nfl-predict",
+            "target": "nfl-predict",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release nfl-predict"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Debug fetch-data",
+            "target": "fetch-data",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug fetch-data"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Release fetch-data",
+            "target": "fetch-data",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release fetch-data"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Debug debug-espn",
+            "target": "debug-espn",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug debug-espn"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Release debug-espn",
+            "target": "debug-espn",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release debug-espn"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Debug nfl-server",
+            "target": "nfl-server",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug nfl-server"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Release nfl-server",
+            "target": "nfl-server",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release nfl-server"
+        }
+    ]
+}
