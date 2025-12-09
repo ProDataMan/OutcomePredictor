@@ -52,7 +52,7 @@ public struct HTTPClient: Sendable {
         )
 
         let body = try await response.body.collect(upTo: 10 * 1024 * 1024) // 10MB limit
-        let data = Data(buffer: body)
+        let data = Data(body.readableBytesView)
 
         return (data, Int(response.status.code))
         #else
@@ -99,7 +99,7 @@ public struct HTTPClient: Sendable {
         for (name, value) in headers {
             request.headers.add(name: name, value: value)
         }
-        request.body = .bytes(ByteBuffer(data: body))
+        request.body = .bytes(ByteBuffer(bytes: body))
 
         let response = try await Self.shared.execute(
             request,
@@ -107,7 +107,7 @@ public struct HTTPClient: Sendable {
         )
 
         let responseBody = try await response.body.collect(upTo: 10 * 1024 * 1024)
-        let data = Data(buffer: responseBody)
+        let data = Data(responseBody.readableBytesView)
 
         return (data, Int(response.status.code))
         #else
