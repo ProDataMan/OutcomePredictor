@@ -118,9 +118,7 @@ UPDATE_SUMMARY.md
 *.json
 !Package.resolved
 
-# Docker
-Dockerfile
-.dockerignore
+# Docker files are needed for deployment
 
 # Azure deployment (use docs/deployment instead)
 AZURE_*.md
