@@ -14,7 +14,7 @@ COPY Tests ./Tests
 RUN swift build --configuration release --product nfl-server
 
 # Production stage
-FROM ubuntu:22.04
+FROM swift:6.0-jammy-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -41,8 +41,8 @@ ENV ENV=production
 ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+# Health check - simple server check first
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
   CMD curl -f http://localhost:${PORT}/api/v1/teams || exit 1
 
 # Expose port
