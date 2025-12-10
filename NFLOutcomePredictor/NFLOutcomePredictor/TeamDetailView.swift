@@ -139,7 +139,7 @@ struct TeamHeaderView: View {
                     .font(.title)
                     .fontWeight(.bold)
 
-                Text("\(team.conference.uppercased()) \(team.division.capitalized)")
+                Text(team.displayName ?? team.abbreviation)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -193,7 +193,7 @@ struct GameCardView: View {
     var body: some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Week \(game.week)")
+                Text("Week \(game.week ?? 0)")
                     .font(.caption)
                     .foregroundColor(.secondary)
 

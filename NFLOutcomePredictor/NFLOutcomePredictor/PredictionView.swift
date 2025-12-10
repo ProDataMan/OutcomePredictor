@@ -274,26 +274,14 @@ struct TeamPickerButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color(UIColor.systemGray6))
             .cornerRadius(12)
         }
     }
 }
 
 struct PredictionResultView: View {
-    let prediction: PredictionDTO
-    @StateObject private var apiClient = APIClient()
-    @State private var homeNews: [ArticleDTO] = []
-    @State private var awayNews: [ArticleDTO] = []
-    @State private var loadingNews = false
-
-    var winnerTeam: String {
-        prediction.homeWinProbability > 0.5 ? prediction.homeTeamAbbreviation : prediction.awayTeamAbbreviation
-    }
-
-    var winnerProbability: Double {
-        max(prediction.homeWinProbability, 1 - prediction.homeWinProbability)
-    }
+    let prediction: PredictionResult
 
     var body: some View {
         VStack(spacing: 16) {
@@ -304,111 +292,23 @@ struct PredictionResultView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            // Game details
-            VStack(spacing: 8) {
-                Text("\(homeTeam?.name ?? "Home") vs \(awayTeam?.name ?? "Away")")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Text("Game Prediction")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Text("Prediction Result")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.vertical, 8)
-
             // Winner display
             VStack(spacing: 8) {
-                TeamHelmetView(teamAbbreviation: winnerTeam, size: 80)
+                TeamHelmetView(teamAbbreviation: prediction.predictedWinner, size: 80)
 
-                Text("\(Int(winnerProbability * 100))% Win Probability")
+                Text("\(Int(prediction.confidence * 100))% Win Probability")
                     .font(.headline)
                     .foregroundColor(.green)
+
+                Text("Predicted Winner: \(prediction.predictedWinner)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
             .padding()
             .background(Color.green.opacity(0.1))
             .cornerRadius(12)
 
-            // Predicted Score
-            if let homeScore = prediction.predictedHomeScore,
-               let awayScore = prediction.predictedAwayScore {
-                VStack(spacing: 8) {
-                    Text("Predicted Final Score")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    HStack(spacing: 40) {
-                        VStack(spacing: 4) {
-                            Text(prediction.homeTeamAbbreviation)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(homeScore)")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(homeScore > awayScore ? .primary : .secondary)
-                        }
-
-                        Text("-")
-                            .font(.title3)
-                            .foregroundColor(.secondary)
-
-                        VStack(spacing: 4) {
-                            Text(prediction.awayTeamAbbreviation)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(awayScore)")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(awayScore > homeScore ? .primary : .secondary)
-                        }
-                    }
-                }
-                .padding(.vertical, 12)
-            }
-
-            // Matchup breakdown
-            HStack(spacing: 20) {
-                VStack(spacing: 8) {
-                    TeamHelmetView(teamAbbreviation: prediction.homeTeamAbbreviation, size: 50)
-                    Text(prediction.homeTeam.name)
-                        .font(.caption)
-                        .multilineTextAlignment(.center)
-                    Text("\(Int(prediction.homeWinProbability * 100))%")
-                        .font(.headline)
-                        .foregroundColor(prediction.homeWinProbability > 0.5 ? .green : .secondary)
-                }
-                .frame(maxWidth: .infinity)
-
-                VStack {
-                    Text("vs")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                VStack(spacing: 8) {
-                    TeamHelmetView(teamAbbreviation: prediction.awayTeamAbbreviation, size: 50)
-                    Text(prediction.awayTeam.name)
-                        .font(.caption)
-                        .multilineTextAlignment(.center)
-                    Text("\(Int((1 - prediction.homeWinProbability) * 100))%")
-                        .font(.headline)
-                        .foregroundColor(prediction.homeWinProbability < 0.5 ? .green : .secondary)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-
-            // Vegas Odds (if available)
-            if let odds = prediction.vegasOdds {
-                VegasOddsView(odds: odds, prediction: prediction)
-            }
-
-            // Reasoning
+            // AI Analysis
             VStack(alignment: .leading, spacing: 8) {
                 Text("AI Analysis")
                     .font(.headline)
@@ -419,7 +319,7 @@ struct PredictionResultView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color(UIColor.systemGray6))
             .cornerRadius(12)
 
             // Confidence
@@ -447,216 +347,26 @@ struct PredictionResultView: View {
                 .frame(height: 8)
             }
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color(UIColor.systemGray6))
             .cornerRadius(12)
 
-            // Team News Section
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Latest Team News & Injuries")
+            // Model info
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Model Information")
                     .font(.headline)
-                    .padding(.horizontal)
 
-                if loadingNews {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                } else {
-                    VStack(spacing: 12) {
-                        if !homeNews.isEmpty {
-                            TeamNewsSection(
-                                team: prediction.homeTeam,
-                                news: homeNews
-                            )
-                        }
-
-                        if !awayNews.isEmpty {
-                            TeamNewsSection(
-                                team: prediction.awayTeam,
-                                news: awayNews
-                            )
-                        }
-
-                        if homeNews.isEmpty && awayNews.isEmpty {
-                            Text("No recent news available")
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                        }
-                    }
-                }
+                Text("Model: \(prediction.modelVersion)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
-            .task {
-                await loadTeamNews()
-            }
-        }
-    }
-
-    private func loadTeamNews() async {
-        loadingNews = true
-        // News functionality not implemented in current API
-        homeNews = []
-        awayNews = []
-        loadingNews = false
-    }
-}
-
-struct VegasOddsView: View {
-    let odds: VegasOddsDTO
-    let prediction: PredictionDTO
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                        .foregroundColor(.orange)
-                    // Show "(Mock)" if using mock data, otherwise show clean "Vegas Odds"
-                    Text(odds.bookmaker.contains("Mock") ? "Vegas Odds (Mock)" : "Vegas Odds")
-                        .font(.headline)
-                }
-
-                // Show bookmaker as subtitle only for real odds
-                if !odds.bookmaker.contains("Mock") {
-                    Text("via \(odds.bookmaker)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            // Spread
-            if let spread = odds.spread {
-                HStack {
-                    Text("Spread:")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("\(prediction.homeTeamAbbreviation) \(spread > 0 ? "+" : "")\(String(format: "%.1f", spread))")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                }
-            }
-
-            // Total
-            if let total = odds.total {
-                HStack {
-                    Text("Over/Under:")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(String(format: "%.1f", total))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                }
-            }
-
-            // Moneylines
-            HStack(spacing: 20) {
-                if let homeML = odds.homeMoneyline {
-                    VStack(spacing: 4) {
-                        Text(prediction.homeTeamAbbreviation)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(homeML > 0 ? "+\(homeML)" : "\(homeML)")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-
-                if let awayML = odds.awayMoneyline {
-                    VStack(spacing: 4) {
-                        Text(prediction.awayTeamAbbreviation)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(awayML > 0 ? "+\(awayML)" : "\(awayML)")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-
-            // Implied probabilities
-            if let homeProb = odds.homeImpliedProbability,
-               let awayProb = odds.awayImpliedProbability {
-                Divider()
-
-                HStack {
-                    Text("Market Probabilities")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-
-                HStack(spacing: 20) {
-                    VStack(spacing: 4) {
-                        Text(prediction.homeTeamAbbreviation)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text("\(Int(homeProb * 100))%")
-                            .font(.subheadline)
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    VStack(spacing: 4) {
-                        Text(prediction.awayTeamAbbreviation)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text("\(Int(awayProb * 100))%")
-                            .font(.subheadline)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
-        .padding()
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(12)
-    }
-}
-
-struct TeamNewsSection: View {
-    let team: TeamDTO
-    let news: [ArticleDTO]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                TeamHelmetView(teamAbbreviation: team.abbreviation, size: 24)
-                Text(team.name)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-            }
-            .padding(.horizontal)
-
-            ForEach(news, id: \.id) { article in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(article.title)
-                        .font(.caption)
-                        .lineLimit(2)
-
-                    HStack {
-                        Text(article.source)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text("•")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text(article.publishedDate, style: .relative)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-                .padding(.horizontal)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(Color(UIColor.systemGray6))
+            .cornerRadius(12)
         }
     }
 }
+
 
 struct TeamPickerSheet: View {
     let teams: [TeamDTO]
@@ -744,7 +454,7 @@ struct UpcomingGameCard: View {
         }
         .padding(12)
         .frame(width: 140)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color(.systemGray6))
+        .background(isSelected ? Color.accentColor.opacity(0.2) : Color(UIColor.systemGray6))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
