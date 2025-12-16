@@ -87,11 +87,9 @@ let package = Package(
             name: "ConfigCLI",
             dependencies: ["OutcomePredictor"]
         ),
-        // Commented out for Docker builds to avoid overlapping sources error
-        // Uncomment for local development and testing
-        // .testTarget(
-        //     name: "OutcomePredictorTests",
-        //     dependencies: ["OutcomePredictor"]
-        // ),
+        .testTarget(
+            name: "OutcomePredictorTests",
+            dependencies: ["OutcomePredictor"]
+        ),
     ]
 )
