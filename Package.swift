@@ -35,6 +35,10 @@ let package = Package(
             name: "nfl-server",
             targets: ["NFLServer"]
         ),
+        .executable(
+            name: "config",
+            targets: ["ConfigCLI"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/vapor/vapor.git", from: "4.99.0"),
@@ -77,6 +81,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "DebugESPN",
+            dependencies: ["OutcomePredictor"]
+        ),
+        .executableTarget(
+            name: "ConfigCLI",
             dependencies: ["OutcomePredictor"]
         ),
         // Commented out for Docker builds to avoid overlapping sources error

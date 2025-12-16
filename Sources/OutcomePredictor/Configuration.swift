@@ -1,9 +1,14 @@
 import Foundation
 
-/// Application configuration using environment variables.
+/// Application configuration using multiple sources with priority order.
 ///
-/// Supports multiple deployment environments (development, production).
-/// Configuration values are loaded from environment variables with sensible defaults.
+/// Supports multiple configuration sources:
+/// 1. Environment variables (highest priority)
+/// 2. Configuration files (.config.json, .env)
+/// 3. Keychain for secrets (macOS/iOS)
+/// 4. Default values (lowest priority)
+///
+/// Configuration values are loaded through ConfigurationManager for secure and flexible handling.
 public struct Configuration: Sendable {
     /// API configuration.
     public struct API: Sendable {
@@ -33,6 +38,9 @@ public struct Configuration: Sendable {
             serverPort: Int? = nil,
             cacheExpiration: TimeInterval? = nil
         ) {
+            // First try direct parameters, then fall back to environment variables
+            // ConfigurationManager provides async access via separate methods
+
             self.oddsAPIKey = oddsAPIKey
                 ?? ProcessInfo.processInfo.environment["ODDS_API_KEY"]
                 ?? ""
@@ -58,6 +66,73 @@ public struct Configuration: Sendable {
 
             self.cacheExpiration = cacheExpiration
                 ?? TimeInterval(ProcessInfo.processInfo.environment["CACHE_EXPIRATION"] ?? "21600") ?? 21600
+        }
+
+        /// Load configuration asynchronously from ConfigurationManager
+        /// This provides access to file-based and keychain configurations
+        public static func loadAsync(
+            oddsAPIKey: String? = nil,
+            espnBaseURL: String? = nil,
+            oddsAPIBaseURL: String? = nil,
+            serverBaseURL: String? = nil,
+            serverPort: Int? = nil,
+            cacheExpiration: TimeInterval? = nil
+        ) async -> API {
+            let configManager = ConfigurationManager.shared
+
+            let resolvedOddsAPIKey: String
+            if let oddsAPIKey = oddsAPIKey {
+                resolvedOddsAPIKey = oddsAPIKey
+            } else {
+                resolvedOddsAPIKey = await configManager.getValue("ODDS_API_KEY", default: "")
+            }
+
+            let resolvedEspnBaseURL: String
+            if let espnBaseURL = espnBaseURL {
+                resolvedEspnBaseURL = espnBaseURL
+            } else {
+                resolvedEspnBaseURL = await configManager.getValue("ESPN_BASE_URL",
+                    default: "https://site.api.espn.com/apis/site/v2/sports/football/nfl")
+            }
+
+            let resolvedOddsAPIBaseURL: String
+            if let oddsAPIBaseURL = oddsAPIBaseURL {
+                resolvedOddsAPIBaseURL = oddsAPIBaseURL
+            } else {
+                resolvedOddsAPIBaseURL = await configManager.getValue("ODDS_API_BASE_URL",
+                    default: "https://api.the-odds-api.com/v4")
+            }
+
+            let resolvedServerBaseURL: String
+            if let serverBaseURL = serverBaseURL {
+                resolvedServerBaseURL = serverBaseURL
+            } else {
+                resolvedServerBaseURL = await configManager.getValue("SERVER_BASE_URL",
+                    default: "http://localhost:8080/api/v1")
+            }
+
+            let resolvedServerPort: Int
+            if let serverPort = serverPort {
+                resolvedServerPort = serverPort
+            } else {
+                resolvedServerPort = await configManager.getValue("PORT", as: Int.self, default: 8080)
+            }
+
+            let resolvedCacheExpiration: TimeInterval
+            if let cacheExpiration = cacheExpiration {
+                resolvedCacheExpiration = cacheExpiration
+            } else {
+                resolvedCacheExpiration = await configManager.getValue("CACHE_EXPIRATION", as: TimeInterval.self, default: 21600)
+            }
+
+            return API(
+                oddsAPIKey: resolvedOddsAPIKey,
+                espnBaseURL: resolvedEspnBaseURL,
+                oddsAPIBaseURL: resolvedOddsAPIBaseURL,
+                serverBaseURL: resolvedServerBaseURL,
+                serverPort: resolvedServerPort,
+                cacheExpiration: resolvedCacheExpiration
+            )
         }
     }
 
@@ -92,6 +167,15 @@ public struct Configuration: Sendable {
     ) {
         self.environment = environment ?? Environment.current
         self.api = api ?? API()
+    }
+
+    /// Load configuration asynchronously with full ConfigurationManager support
+    public static func loadAsync(
+        environment: Environment? = nil
+    ) async -> Configuration {
+        let resolvedEnvironment = environment ?? Environment.current
+        let api = await API.loadAsync()
+        return Configuration(environment: resolvedEnvironment, api: api)
     }
 
     /// Validates required configuration values.
