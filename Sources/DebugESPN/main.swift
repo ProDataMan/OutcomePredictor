@@ -40,21 +40,14 @@ struct DebugESPN {
     }
 
     static func inspectURL(_ urlString: String, name: String) async throws {
-        guard let url = URL(string: urlString) else {
-            print("Invalid URL")
-            return
-        }
-
         print("URL: \(urlString)")
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        // Use HTTPClient from OutcomePredictor module which works on Linux
+        let httpClient = HTTPClient()
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            print("Invalid response")
-            return
-        }
+        let (data, statusCode) = try await httpClient.get(url: urlString)
 
-        print("Status: \(httpResponse.statusCode)")
+        print("Status: \(statusCode)")
         print("Size: \(data.count) bytes")
         print("")
 
