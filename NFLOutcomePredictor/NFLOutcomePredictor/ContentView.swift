@@ -141,7 +141,7 @@ struct TeamCardView: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
 
-                Text(team.displayName ?? team.name)
+                Text(team.name)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

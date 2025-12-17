@@ -139,7 +139,7 @@ struct TeamHeaderView: View {
                     .font(.title)
                     .fontWeight(.bold)
 
-                Text(team.displayName ?? team.abbreviation)
+                Text("\(team.conference) \(team.division)")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }

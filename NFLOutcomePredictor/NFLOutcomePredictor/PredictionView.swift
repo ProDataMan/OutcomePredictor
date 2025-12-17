@@ -377,23 +377,24 @@ struct TeamPickerSheet: View {
         NavigationStack {
             List {
                 ForEach(teams) { team in
-                Button {
-                    selectedTeam = team
-                    dismiss()
-                } label: {
-                    HStack {
-                        TeamHelmetView(teamAbbreviation: team.abbreviation, size: 40)
-                        VStack(alignment: .leading) {
-                            Text(team.name)
-                                .font(.headline)
-                            Text(team.displayName ?? team.abbreviation)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        if selectedTeam?.abbreviation == team.abbreviation {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.accentColor)
+                    Button {
+                        selectedTeam = team
+                        dismiss()
+                    } label: {
+                        HStack {
+                            TeamHelmetView(teamAbbreviation: team.abbreviation, size: 40)
+                            VStack(alignment: .leading) {
+                                Text(team.name)
+                                    .font(.headline)
+                                Text("\(team.conference) \(team.division)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            if selectedTeam?.abbreviation == team.abbreviation {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
                         }
                     }
                 }
