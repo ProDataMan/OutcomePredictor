@@ -15,6 +15,10 @@ struct PredictionView: View {
     @State private var upcomingGames: [GameDTO] = []
     @State private var selectedUpcomingGameIndex: Int?
 
+    // Task management to prevent concurrent requests
+    @State private var loadGamesTask: Task<Void, Never>?
+    @State private var predictionTask: Task<Void, Never>?
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -134,9 +138,7 @@ struct PredictionView: View {
 
                     // Predict button
                     Button {
-                        Task {
-                            await makePrediction()
-                        }
+                        makePredictionTask()
                     } label: {
                         HStack {
                             if isLoading {
@@ -198,15 +200,32 @@ struct PredictionView: View {
     }
 
     private func loadUpcomingGames() async {
-        do {
-            upcomingGames = try await apiClient.fetchUpcomingGames()
-            // Auto-select and predict the first upcoming game
-            if !upcomingGames.isEmpty {
-                selectUpcomingGame(at: 0)
+        // Cancel any existing load task
+        loadGamesTask?.cancel()
+
+        loadGamesTask = Task {
+            do {
+                let games = try await apiClient.fetchUpcomingGames()
+
+                // Check if task was cancelled
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    upcomingGames = games
+                    // Auto-select and predict the first upcoming game
+                    if !upcomingGames.isEmpty {
+                        selectUpcomingGame(at: 0)
+                    }
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self.error = error.localizedDescription
+                }
             }
-        } catch {
-            self.error = error.localizedDescription
         }
+
+        await loadGamesTask?.value
     }
 
     private func selectUpcomingGame(at index: Int) {
@@ -219,8 +238,15 @@ struct PredictionView: View {
         selectedSeason = game.season ?? Calendar.current.component(.year, from: Date())
         selectedWeek = game.week ?? 1
 
-        // Auto-predict this game
-        Task {
+        // Auto-predict this game with proper task management
+        makePredictionTask()
+    }
+
+    private func makePredictionTask() {
+        // Cancel any existing prediction task
+        predictionTask?.cancel()
+
+        predictionTask = Task {
             await makePrediction()
         }
     }
@@ -228,20 +254,32 @@ struct PredictionView: View {
     private func makePrediction() async {
         guard let homeTeam = homeTeam, let awayTeam = awayTeam else { return }
 
-        isLoading = true
-        error = nil
-        prediction = nil
+        await MainActor.run {
+            isLoading = true
+            error = nil
+            prediction = nil
+        }
 
         do {
-            prediction = try await apiClient.makePrediction(
+            let result = try await apiClient.makePrediction(
                 home: homeTeam.abbreviation,
                 away: awayTeam.abbreviation
             )
-        } catch {
-            self.error = error.localizedDescription
-        }
 
-        isLoading = false
+            // Check if task was cancelled
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                prediction = result
+                isLoading = false
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self.error = error.localizedDescription
+                isLoading = false
+            }
+        }
     }
 }
 
