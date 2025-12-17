@@ -81,11 +81,24 @@ final class APIClient: ObservableObject {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-            let requestBody = [
-                "home_team_abbreviation": home,
-                "away_team_abbreviation": away,
-                "season": Calendar.current.component(.year, from: Date())
-            ]
+            // Create a Codable request struct
+            struct PredictionRequest: Codable {
+                let homeTeamAbbreviation: String
+                let awayTeamAbbreviation: String
+                let season: Int
+
+                enum CodingKeys: String, CodingKey {
+                    case homeTeamAbbreviation = "home_team_abbreviation"
+                    case awayTeamAbbreviation = "away_team_abbreviation"
+                    case season
+                }
+            }
+
+            let requestBody = PredictionRequest(
+                homeTeamAbbreviation: home,
+                awayTeamAbbreviation: away,
+                season: Calendar.current.component(.year, from: Date())
+            )
 
             let encoder = JSONEncoder()
             request.httpBody = try encoder.encode(requestBody)
