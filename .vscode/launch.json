@@ -79,6 +79,26 @@
             "target": "nfl-server",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release nfl-server"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Debug config",
+            "target": "config",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug config"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:OutcomePredictor}",
+            "name": "Release config",
+            "target": "config",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release config"
         }
     ]
 }

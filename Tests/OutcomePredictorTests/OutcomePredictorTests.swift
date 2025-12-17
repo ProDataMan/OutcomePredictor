@@ -372,3 +372,72 @@ func createTestPredictions() -> [(prediction: Prediction, outcome: GameOutcome)]
          GameOutcome(homeScore: 14, awayScore: 17)),
     ]
 }
+
+@Suite("Feature: Configuration Management")
+struct ConfigurationTests {
+    @Test("ConfigurationManager loads default values", .tags(.small))
+    func testConfigurationDefaultValues() async {
+        let configManager = ConfigurationManager.shared
+
+        let serverURL = await configManager.getValue("NONEXISTENT_KEY", default: "http://default.com")
+        #expect(serverURL == "http://default.com")
+
+        let port = await configManager.getValue("NONEXISTENT_PORT", as: Int.self, default: 3000)
+        #expect(port == 3000)
+    }
+
+    @Test("Configuration loads with environment detection", .tags(.small))
+    func testConfigurationEnvironmentDetection() async {
+        let config = await Configuration.loadAsync()
+
+        #expect(config.environment == .development ||
+                config.environment == .testing ||
+                config.environment == .production)
+
+        #expect(!config.api.espnBaseURL.isEmpty)
+        #expect(config.api.serverPort > 0)
+        #expect(config.api.cacheExpiration >= 0)
+    }
+
+    @Test("ConfigurationProfiles provides all expected profiles", .tags(.small))
+    func testConfigurationProfiles() {
+        let profiles = ConfigurationProfiles.all
+
+        #expect(profiles.count == 4)
+
+        let profileNames = profiles.map(\.name)
+        #expect(profileNames.contains("Development"))
+        #expect(profileNames.contains("Testing"))
+        #expect(profileNames.contains("Production"))
+        #expect(profileNames.contains("Staging"))
+
+        let currentProfile = ConfigurationProfiles.currentProfile()
+        #expect(profileNames.contains(currentProfile.name))
+    }
+
+    @Test("ConfigurationProfile validates API defaults", .tags(.small))
+    func testConfigurationProfileAPIDefaults() {
+        let devProfile = ConfigurationProfiles.development
+
+        #expect(devProfile.apiDefaults["SERVER_BASE_URL"] == "http://localhost:8080/api/v1")
+        #expect(devProfile.apiDefaults["PORT"] == "8080")
+        #expect(devProfile.apiDefaults["CACHE_EXPIRATION"] == "300")
+
+        let prodProfile = ConfigurationProfiles.production
+        #expect(prodProfile.apiDefaults["SERVER_BASE_URL"] == "https://statshark-api.azurewebsites.net/api/v1")
+        #expect(prodProfile.apiDefaults["CACHE_EXPIRATION"] == "21600")
+    }
+
+    @Test("Configuration validation handles missing secrets gracefully", .tags(.small))
+    func testConfigurationValidation() async {
+        // This should not throw for development environment without secrets
+        do {
+            let config = await Configuration.loadAsync(environment: .development)
+            try await ConfigurationValidator.validateConfiguration(config)
+            // Validation should succeed for development even without secrets
+        } catch {
+            // Expected for missing network access or secrets, but shouldn't crash
+            #expect(error is AppConfigurationError)
+        }
+    }
+}
