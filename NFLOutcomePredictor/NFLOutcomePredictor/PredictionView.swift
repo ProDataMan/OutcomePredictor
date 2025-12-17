@@ -450,7 +450,7 @@ struct UpcomingGameCard: View {
             }
 
             // Week indicator
-            Text("Week \(game.week)")
+            Text("Week \(game.week ?? 0)")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }

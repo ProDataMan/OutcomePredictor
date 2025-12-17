@@ -166,11 +166,11 @@ struct GameCardView: View {
     let teamAbbreviation: String
 
     var isHomeGame: Bool {
-        game.homeTeamAbbreviation == teamAbbreviation
+        game.homeTeam.abbreviation == teamAbbreviation
     }
 
     var opponent: String {
-        isHomeGame ? game.awayTeamAbbreviation : game.homeTeamAbbreviation
+        isHomeGame ? game.awayTeam.abbreviation : game.homeTeam.abbreviation
     }
 
     var gameResult: String? {
@@ -261,9 +261,10 @@ struct NewsCardView: View {
 #Preview {
     NavigationStack {
         TeamDetailView(team: TeamDTO(
-            id: "kc",
             name: "Kansas City Chiefs",
-            abbreviation: "KC"
+            abbreviation: "KC",
+            conference: "AFC",
+            division: "West"
         ))
     }
 }
