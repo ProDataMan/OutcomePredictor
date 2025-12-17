@@ -27,7 +27,7 @@ final class DataManager: ObservableObject {
     /// Fetches teams with caching and concurrent request prevention.
     func loadTeams(forceReload: Bool = false) async {
         // Check if we have recent data and don't need to reload
-        if !forceReload && !teams.isEmpty &&
+        if !forceReload && !teams.isEmpty,
            let lastLoad = lastTeamsLoad,
            Date().timeIntervalSince(lastLoad) < 300 { // 5 minutes cache
             return
@@ -68,7 +68,7 @@ final class DataManager: ObservableObject {
     /// Fetches upcoming games with caching and concurrent request prevention.
     func loadUpcomingGames(forceReload: Bool = false) async {
         // Check if we have recent data and don't need to reload
-        if !forceReload && !upcomingGames.isEmpty &&
+        if !forceReload && !upcomingGames.isEmpty,
            let lastLoad = lastGamesLoad,
            Date().timeIntervalSince(lastLoad) < 180 { // 3 minutes cache
             return
