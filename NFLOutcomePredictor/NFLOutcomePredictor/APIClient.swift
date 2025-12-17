@@ -76,9 +76,31 @@ final class APIClient: ObservableObject {
         away: String
     ) async throws -> PredictionResult {
         do {
-            let url = URL(string: "\(baseURL)/predict/\(home)/\(away)")!
-            let (data, _) = try await URLSession.shared.data(from: url)
-            return try decoder.decode(PredictionResult.self, from: data)
+            let url = URL(string: "\(baseURL)/predictions")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            let requestBody = [
+                "home_team_abbreviation": home,
+                "away_team_abbreviation": away,
+                "season": Calendar.current.component(.year, from: Date())
+            ]
+
+            let encoder = JSONEncoder()
+            request.httpBody = try encoder.encode(requestBody)
+
+            let (data, _) = try await URLSession.shared.data(for: request)
+
+            // The API returns PredictionDTO but we need to map it to PredictionResult
+            let predictionDTO = try decoder.decode(PredictionDTO.self, from: data)
+
+            return PredictionResult(
+                predictedWinner: predictionDTO.homeWinProbability > predictionDTO.awayWinProbability ? home : away,
+                confidence: predictionDTO.confidence,
+                reasoning: predictionDTO.reasoning,
+                modelVersion: "Production API v1.0"
+            )
         } catch {
             ErrorHandler.shared.handle(error, context: "Failed to make prediction for \(away) @ \(home)")
             throw error

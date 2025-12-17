@@ -86,6 +86,12 @@ public struct GameDTO: Codable, Sendable {
     public let awayScore: Int?
     public let status: String?
 
+    // Custom mapping for scheduled_date -> date
+    enum CodingKeys: String, CodingKey {
+        case id, homeTeam, awayTeam, week, season, homeScore, awayScore, status
+        case date = "scheduledDate"  // Maps to scheduled_date via snake_case conversion
+    }
+
     public init(
         id: String,
         homeTeam: TeamDTO,
@@ -230,6 +236,8 @@ public struct PredictionDTO: Codable, Sendable {
     public let reasoning: String
     public let vegasOdds: VegasOddsDTO?
 
+    // Note: APIClient uses .convertFromSnakeCase for automatic mapping
+
     public init(
         gameId: String,
         homeTeam: TeamDTO,
@@ -274,6 +282,8 @@ public struct VegasOddsDTO: Codable, Sendable {
     public let homeImpliedProbability: Double?
     public let awayImpliedProbability: Double?
     public let bookmaker: String
+
+    // Note: APIClient uses .convertFromSnakeCase for automatic mapping
 
     public init(
         homeMoneyline: Int?,
