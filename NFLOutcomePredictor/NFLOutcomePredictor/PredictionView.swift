@@ -375,7 +375,7 @@ struct TeamPickerSheet: View {
 
     var body: some View {
         NavigationStack {
-            List(teams, id: \.abbreviation) { team in
+            List(teams) { team in
                 Button {
                     selectedTeam = team
                     dismiss()
