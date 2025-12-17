@@ -313,7 +313,7 @@ struct PredictionResultView: View {
                 Text("AI Analysis")
                     .font(.headline)
 
-                Text(prediction.reasoning)
+                Text(prediction.reasoning ?? "No analysis available")
                     .font(.body)
                     .foregroundColor(.secondary)
             }
