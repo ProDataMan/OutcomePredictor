@@ -1,22 +1,19 @@
 import SwiftUI
 
 struct PredictionView: View {
-    @StateObject private var apiClient = APIClient()
+    @StateObject private var dataManager = DataManager.shared
     @State private var homeTeam: TeamDTO?
     @State private var awayTeam: TeamDTO?
     @State private var selectedSeason = Calendar.current.component(.year, from: Date())
     @State private var selectedWeek = 1
     @State private var prediction: PredictionResult?
-    @State private var isLoading = false
-    @State private var error: String?
+    @State private var isLoadingPrediction = false
+    @State private var predictionError: String?
     @State private var showingTeamPicker = false
     @State private var pickingHome = true
-    @State private var teams: [TeamDTO] = []
-    @State private var upcomingGames: [GameDTO] = []
     @State private var selectedUpcomingGameIndex: Int?
 
-    // Task management to prevent concurrent requests
-    @State private var loadGamesTask: Task<Void, Never>?
+    // Task management for predictions only
     @State private var predictionTask: Task<Void, Never>?
 
     var body: some View {
@@ -29,7 +26,7 @@ struct PredictionView: View {
                         .padding(.top, 8)
 
                     // Upcoming games section
-                    if !upcomingGames.isEmpty {
+                    if !dataManager.upcomingGames.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Upcoming Games")
@@ -43,7 +40,7 @@ struct PredictionView: View {
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
-                                    ForEach(Array(upcomingGames.prefix(5).enumerated()), id: \.element.id) { index, game in
+                                    ForEach(Array(dataManager.upcomingGames.prefix(5).enumerated()), id: \.element.id) { index, game in
                                         UpcomingGameCard(game: game, isSelected: selectedUpcomingGameIndex == index)
                                             .onTapGesture {
                                                 selectUpcomingGame(at: index)
@@ -141,7 +138,7 @@ struct PredictionView: View {
                         makePredictionTask()
                     } label: {
                         HStack {
-                            if isLoading {
+                            if isLoadingPrediction {
                                 ProgressView()
                                     .tint(.white)
                             } else {
@@ -155,7 +152,7 @@ struct PredictionView: View {
                         .foregroundColor(.white)
                         .cornerRadius(12)
                     }
-                    .disabled(!canMakePrediction || isLoading)
+                    .disabled(!canMakePrediction || isLoadingPrediction)
                     .padding(.horizontal)
 
                     // Prediction result
@@ -165,9 +162,25 @@ struct PredictionView: View {
                     }
 
                     // Error message
-                    if let error = error {
+                    if let error = predictionError {
                         Text(error)
                             .foregroundColor(.red)
+                            .padding()
+                    }
+
+                    // Loading indicator for games
+                    if dataManager.isLoadingGames {
+                        HStack {
+                            ProgressView()
+                            Text("Loading upcoming games...")
+                        }
+                        .padding()
+                    }
+
+                    // General error from data manager
+                    if let error = dataManager.error {
+                        Text(error)
+                            .foregroundColor(.orange)
                             .padding()
                     }
                 }
@@ -176,13 +189,18 @@ struct PredictionView: View {
             .navigationTitle("Game Prediction")
             .sheet(isPresented: $showingTeamPicker) {
                 TeamPickerSheet(
-                    teams: teams,
+                    teams: dataManager.teams,
                     selectedTeam: pickingHome ? $homeTeam : $awayTeam
                 )
             }
             .task {
-                await loadTeams()
-                await loadUpcomingGames()
+                await dataManager.loadTeams()
+                await dataManager.loadUpcomingGames()
+
+                // Auto-select first game if available
+                if !dataManager.upcomingGames.isEmpty && selectedUpcomingGameIndex == nil {
+                    selectUpcomingGame(at: 0)
+                }
             }
         }
     }
@@ -191,48 +209,11 @@ struct PredictionView: View {
         homeTeam != nil && awayTeam != nil && homeTeam?.abbreviation != awayTeam?.abbreviation
     }
 
-    private func loadTeams() async {
-        do {
-            teams = try await apiClient.fetchTeams()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    private func loadUpcomingGames() async {
-        // Cancel any existing load task
-        loadGamesTask?.cancel()
-
-        loadGamesTask = Task {
-            do {
-                let games = try await apiClient.fetchUpcomingGames()
-
-                // Check if task was cancelled
-                guard !Task.isCancelled else { return }
-
-                await MainActor.run {
-                    upcomingGames = games
-                    // Auto-select and predict the first upcoming game
-                    if !upcomingGames.isEmpty {
-                        selectUpcomingGame(at: 0)
-                    }
-                }
-            } catch {
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    self.error = error.localizedDescription
-                }
-            }
-        }
-
-        await loadGamesTask?.value
-    }
-
     private func selectUpcomingGame(at index: Int) {
-        guard index < upcomingGames.count else { return }
+        guard index < dataManager.upcomingGames.count else { return }
         selectedUpcomingGameIndex = index
 
-        let game = upcomingGames[index]
+        let game = dataManager.upcomingGames[index]
         homeTeam = game.homeTeam
         awayTeam = game.awayTeam
         selectedSeason = game.season ?? Calendar.current.component(.year, from: Date())
@@ -255,13 +236,13 @@ struct PredictionView: View {
         guard let homeTeam = homeTeam, let awayTeam = awayTeam else { return }
 
         await MainActor.run {
-            isLoading = true
-            error = nil
+            isLoadingPrediction = true
+            predictionError = nil
             prediction = nil
         }
 
         do {
-            let result = try await apiClient.makePrediction(
+            let result = try await dataManager.makePrediction(
                 home: homeTeam.abbreviation,
                 away: awayTeam.abbreviation
             )
@@ -271,13 +252,13 @@ struct PredictionView: View {
 
             await MainActor.run {
                 prediction = result
-                isLoading = false
+                isLoadingPrediction = false
             }
         } catch {
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                self.error = error.localizedDescription
-                isLoading = false
+                predictionError = error.localizedDescription
+                isLoadingPrediction = false
             }
         }
     }

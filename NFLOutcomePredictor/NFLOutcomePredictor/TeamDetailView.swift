@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TeamDetailView: View {
     let team: TeamDTO
-    @StateObject private var apiClient = APIClient()
+    @StateObject private var dataManager = DataManager.shared
     @State private var games: [GameDTO] = []
     @State private var news: [ArticleDTO] = []
     @State private var isLoadingGames = false
@@ -103,18 +103,16 @@ struct TeamDetailView: View {
 
     private func loadGames() async {
         isLoadingGames = true
-        do {
-            // Use the team details endpoint instead of team-specific games
-            // For now, show upcoming games as a fallback
-            let upcomingGames = try await apiClient.fetchUpcomingGames()
-            // Filter games that involve this team
-            games = upcomingGames.filter { game in
-                game.homeTeam.abbreviation == team.abbreviation ||
-                game.awayTeam.abbreviation == team.abbreviation
-            }
-        } catch {
-            self.error = error.localizedDescription
+
+        // Use shared data manager instead of making separate API call
+        await dataManager.loadUpcomingGames()
+
+        // Filter games that involve this team
+        games = dataManager.upcomingGames.filter { game in
+            game.homeTeam.abbreviation == team.abbreviation ||
+            game.awayTeam.abbreviation == team.abbreviation
         }
+
         isLoadingGames = false
     }
 

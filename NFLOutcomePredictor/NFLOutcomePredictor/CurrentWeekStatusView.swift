@@ -7,7 +7,7 @@ struct CurrentWeekStatusView: View {
     @State private var currentDate = Date()
     @State private var currentWeek: Int?
     @State private var currentSeason: Int
-    @StateObject private var apiClient = APIClient()
+    @StateObject private var dataManager = DataManager.shared
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     init() {
@@ -63,14 +63,14 @@ struct CurrentWeekStatusView: View {
     }
 
     private func loadCurrentWeek() async {
-        do {
-            // Fetch upcoming games to determine current week
-            let games = try await apiClient.fetchUpcomingGames()
-            if let firstGame = games.first {
-                currentWeek = firstGame.week
-                currentSeason = firstGame.season ?? Calendar.current.component(.year, from: Date())
-            }
-        } catch {
+        // Use shared data manager instead of making separate API call
+        await dataManager.loadUpcomingGames()
+
+        // Extract week from loaded games
+        if let firstGame = dataManager.upcomingGames.first {
+            currentWeek = firstGame.week
+            currentSeason = firstGame.season ?? Calendar.current.component(.year, from: Date())
+        } else {
             // If we can't fetch games, just show the season
             currentWeek = nil
         }

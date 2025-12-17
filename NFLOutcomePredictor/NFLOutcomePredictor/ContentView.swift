@@ -31,9 +31,7 @@ struct ContentView: View {
 }
 
 struct TeamsListView: View {
-    @StateObject private var apiClient = APIClient()
-    @State private var teams: [TeamDTO] = []
-    @State private var isLoading = false
+    @StateObject private var dataManager = DataManager.shared
     @State private var error: String?
     @State private var selectedConference: String = "All"
 
@@ -42,13 +40,13 @@ struct TeamsListView: View {
     var filteredTeams: [TeamDTO] {
         // Conference filtering not available with basic TeamDTO
         // All teams shown for now
-        return teams.sorted { $0.name < $1.name }
+        return dataManager.teams.sorted { $0.name < $1.name }
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if isLoading {
+                if dataManager.isLoadingTeams {
                     VStack(spacing: 20) {
                         ProgressView()
                             .scaleEffect(1.5)
@@ -56,10 +54,10 @@ struct TeamsListView: View {
                             .font(.headline)
                             .foregroundColor(.secondary)
                     }
-                } else if let error = error {
+                } else if let error = error ?? dataManager.error {
                     ErrorView(error: error) {
                         Task {
-                            await loadTeams()
+                            await dataManager.loadTeams(forceReload: true)
                         }
                     }
                 } else {
@@ -99,31 +97,18 @@ struct TeamsListView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task {
-                            await loadTeams()
+                            await dataManager.loadTeams(forceReload: true)
                         }
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .disabled(isLoading)
+                    .disabled(dataManager.isLoadingTeams)
                 }
             }
             .task {
-                await loadTeams()
+                await dataManager.loadTeams()
             }
         }
-    }
-
-    private func loadTeams() async {
-        isLoading = true
-        error = nil
-
-        do {
-            teams = try await apiClient.fetchTeams()
-        } catch {
-            self.error = error.localizedDescription
-        }
-
-        isLoading = false
     }
 }
 
