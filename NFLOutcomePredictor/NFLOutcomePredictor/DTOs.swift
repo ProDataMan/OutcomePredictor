@@ -6,31 +6,25 @@ import Foundation
 // MARK: - Team DTO
 
 /// Simplified team representation for API responses.
-public struct TeamDTO: Codable, Sendable {
-    public let id: String
+public struct TeamDTO: Codable, Sendable, Identifiable {
     public let name: String
     public let abbreviation: String
-    public let displayName: String?
-    public let color: String?
-    public let alternateColor: String?
-    public let logo: String?
+    public let conference: String
+    public let division: String
+
+    // Use abbreviation as unique identifier for SwiftUI
+    public var id: String { abbreviation }
 
     public init(
-        id: String,
         name: String,
         abbreviation: String,
-        displayName: String? = nil,
-        color: String? = nil,
-        alternateColor: String? = nil,
-        logo: String? = nil
+        conference: String,
+        division: String
     ) {
-        self.id = id
         self.name = name
         self.abbreviation = abbreviation
-        self.displayName = displayName
-        self.color = color
-        self.alternateColor = alternateColor
-        self.logo = logo
+        self.conference = conference
+        self.division = division
     }
 }
 
