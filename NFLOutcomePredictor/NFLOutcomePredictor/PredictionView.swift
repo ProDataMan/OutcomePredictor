@@ -375,7 +375,8 @@ struct TeamPickerSheet: View {
 
     var body: some View {
         NavigationStack {
-            List(teams) { team in
+            List {
+                ForEach(teams) { team in
                 Button {
                     selectedTeam = team
                     dismiss()
