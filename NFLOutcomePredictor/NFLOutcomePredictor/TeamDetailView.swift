@@ -124,13 +124,25 @@ struct TeamDetailView: View {
     private func loadGames() async {
         isLoadingGames = true
 
-        // Use shared data manager instead of making separate API call
-        await dataManager.loadUpcomingGames()
+        do {
+            let apiClient = APIClient()
+            let allGames = try await apiClient.fetchTeamGames(teamAbbreviation: team.abbreviation, season: selectedSeason)
 
-        // Filter games that involve this team
-        games = dataManager.upcomingGames.filter { game in
-            game.homeTeam.abbreviation == team.abbreviation ||
-            game.awayTeam.abbreviation == team.abbreviation
+            // Filter for upcoming games (games that haven't been played yet or are in progress)
+            // A game is upcoming if it has no final score or the scheduled date is in the future
+            let now = Date()
+            games = allGames.filter { game in
+                // Game is upcoming if it has no scores (not played yet) or scheduled date is in the future
+                if game.homeScore == nil && game.awayScore == nil {
+                    return true
+                }
+                // Also include games scheduled in the future even if they have placeholder scores
+                return game.date > now
+            }
+            .sorted { $0.date < $1.date } // Sort by date, earliest first
+        } catch {
+            // Silently fail - games are not critical
+            games = []
         }
 
         isLoadingGames = false
@@ -189,7 +201,10 @@ struct PlayerStatsSection: View {
     var body: some View {
         VStack(spacing: 12) {
             ForEach(keyPlayers) { player in
-                PlayerStatCard(player: player)
+                NavigationLink(destination: PlayerDetailView(player: player, teamAbbreviation: roster.team.abbreviation)) {
+                    PlayerStatCard(player: player)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(.horizontal)

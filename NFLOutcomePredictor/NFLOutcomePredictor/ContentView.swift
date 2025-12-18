@@ -15,6 +15,11 @@ struct ContentView: View {
                     Label("Predict", systemImage: "chart.bar.fill")
                 }
 
+            FantasyView()
+                .tabItem {
+                    Label("Fantasy", systemImage: "sportscourt.fill")
+                }
+
             #if DEBUG
             Button("Debug") {
                 showDebugMenu = true

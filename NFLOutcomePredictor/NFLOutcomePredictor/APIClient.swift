@@ -177,7 +177,7 @@ final class APIClient: ObservableObject {
                 predictedWinner: predictionDTO.homeWinProbability > predictionDTO.awayWinProbability ? home : away,
                 confidence: predictionDTO.confidence,
                 reasoning: predictionDTO.reasoning,
-                modelVersion: "Production API v1.0"
+                modelVersion: "Production API v2.0"
             )
         } catch {
             if let urlErr = error as? URLError, urlErr.code == .cancelled {
@@ -230,6 +230,26 @@ final class APIClient: ObservableObject {
             }
 
             ErrorHandler.shared.handle(error, context: "Failed to fetch roster for team \(teamAbbreviation)")
+            throw error
+        }
+    }
+
+    /// Fetches all games for a specific team and season.
+    func fetchTeamGames(teamAbbreviation: String, season: Int) async throws -> [GameDTO] {
+        do {
+            let url = URL(string: "\(baseURL)/games?team=\(teamAbbreviation)&season=\(season)")!
+            let (data, _) = try await urlSession.data(from: url)
+            return try decoder.decode([GameDTO].self, from: data)
+        } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
+            ErrorHandler.shared.handle(error, context: "Failed to fetch games for team \(teamAbbreviation)")
             throw error
         }
     }

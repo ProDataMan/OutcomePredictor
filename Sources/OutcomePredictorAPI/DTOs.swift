@@ -336,3 +336,100 @@ public struct TeamRosterDTO: Codable, Sendable {
         self.season = season
     }
 }
+
+// MARK: - Weather DTOs
+
+/// Weather forecast for a game.
+public struct GameWeatherDTO: Codable, Sendable {
+    public let temperature: Double
+    public let condition: String
+    public let windSpeed: Double
+    public let precipitation: Double
+    public let humidity: Double
+    public let timestamp: Date
+
+    public init(
+        temperature: Double,
+        condition: String,
+        windSpeed: Double,
+        precipitation: Double,
+        humidity: Double,
+        timestamp: Date = Date()
+    ) {
+        self.temperature = temperature
+        self.condition = condition
+        self.windSpeed = windSpeed
+        self.precipitation = precipitation
+        self.humidity = humidity
+        self.timestamp = timestamp
+    }
+}
+
+/// Team weather performance statistics.
+public struct TeamWeatherStatsDTO: Codable, Sendable {
+    public let teamAbbreviation: String
+    public let season: Int
+    public let homeStats: WeatherPerformanceDTO
+    public let awayStats: WeatherPerformanceDTO
+
+    public init(
+        teamAbbreviation: String,
+        season: Int,
+        homeStats: WeatherPerformanceDTO,
+        awayStats: WeatherPerformanceDTO
+    ) {
+        self.teamAbbreviation = teamAbbreviation
+        self.season = season
+        self.homeStats = homeStats
+        self.awayStats = awayStats
+    }
+}
+
+/// Performance in different weather conditions.
+public struct WeatherPerformanceDTO: Codable, Sendable {
+    public let clear: ConditionStatsDTO
+    public let rain: ConditionStatsDTO
+    public let snow: ConditionStatsDTO
+    public let wind: ConditionStatsDTO
+    public let cold: ConditionStatsDTO
+    public let hot: ConditionStatsDTO
+
+    public init(
+        clear: ConditionStatsDTO,
+        rain: ConditionStatsDTO,
+        snow: ConditionStatsDTO,
+        wind: ConditionStatsDTO,
+        cold: ConditionStatsDTO,
+        hot: ConditionStatsDTO
+    ) {
+        self.clear = clear
+        self.rain = rain
+        self.snow = snow
+        self.wind = wind
+        self.cold = cold
+        self.hot = hot
+    }
+}
+
+/// Statistics for a weather condition.
+public struct ConditionStatsDTO: Codable, Sendable {
+    public let games: Int
+    public let wins: Int
+    public let losses: Int
+    public let avgPointsScored: Double
+    public let avgPointsAllowed: Double
+
+    public init(
+        games: Int,
+        wins: Int,
+        losses: Int,
+        avgPointsScored: Double,
+        avgPointsAllowed: Double
+    ) {
+        self.games = games
+        self.wins = wins
+        self.losses = losses
+        self.avgPointsScored = avgPointsScored
+        self.avgPointsAllowed = avgPointsAllowed
+    }
+}
