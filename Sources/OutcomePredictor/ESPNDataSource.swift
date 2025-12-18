@@ -86,20 +86,9 @@ public struct ESPNDataSource: NFLDataSource {
 
         let scoreboard = try JSONDecoder().decode(ESPNScoreboard.self, from: data)
 
-        // Determine current NFL season intelligently
-        // NFL regular season: September - January (named for the starting year)
-        // Playoffs/Super Bowl: January - February (still uses starting year)
-        let calendar = Calendar.current
-        let currentYear = calendar.component(.year, from: Date())
-        let currentMonth = calendar.component(.month, from: Date())
-
-        // January-February: previous year's playoffs/Super Bowl
-        // March-August: offseason, use previous completed season
-        // September-December: current year's regular season
-        let season = currentMonth <= 2 ? currentYear - 1 :
-                    currentMonth < 9 ? currentYear - 1 : currentYear
-
-        let week = 1 // Default week, will be overridden by actual game data
+        // Extract season and week from ESPN's scoreboard metadata
+        let season = scoreboard.season?.year ?? Calendar.current.component(.year, from: Date())
+        let week = scoreboard.week?.number ?? 1
 
         return try parseGames(from: scoreboard, season: season, week: week)
     }
@@ -277,6 +266,17 @@ public struct ESPNDataSource: NFLDataSource {
 /// ESPN API response structures.
 private struct ESPNScoreboard: Codable {
     let events: [ESPNEvent]
+    let season: ESPNScoreboardSeason?
+    let week: ESPNScoreboardWeek?
+}
+
+private struct ESPNScoreboardSeason: Codable {
+    let year: Int
+    let type: Int
+}
+
+private struct ESPNScoreboardWeek: Codable {
+    let number: Int
 }
 
 private struct ESPNEvent: Codable {
