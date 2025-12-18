@@ -336,11 +336,3 @@ public struct TeamRosterDTO: Codable, Sendable {
         self.season = season
     }
 }
-
-// MARK: - Vapor Content Conformance
-import Vapor
-
-extension TeamRosterDTO: Content {}
-extension PlayerDTO: Content {}
-extension PlayerStatsDTO: Content {}
-

@@ -14,3 +14,6 @@ extension ErrorResponse: Content {}
 extension GamesRequest: Content {}
 extension NewsRequest: Content {}
 extension PredictionRequest: Content {}
+extension TeamRosterDTO: Content {}
+extension PlayerDTO: Content {}
+extension PlayerStatsDTO: Content {}
