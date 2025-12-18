@@ -189,4 +189,25 @@ final class APIClient: ObservableObject {
             throw error
         }
     }
+
+    /// Fetches team roster with player stats.
+    func fetchRoster(teamAbbreviation: String, season: Int? = nil) async throws -> TeamRosterDTO {
+        do {
+            let currentSeason = season ?? Calendar.current.component(.year, from: Date())
+            let url = URL(string: "\(baseURL)/teams/\(teamAbbreviation)/roster?season=\(currentSeason)")!
+            let (data, _) = try await urlSession.data(from: url)
+            return try decoder.decode(TeamRosterDTO.self, from: data)
+        } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
+            ErrorHandler.shared.handle(error, context: "Failed to fetch roster for team \(teamAbbreviation)")
+            throw error
+        }
+    }
 }

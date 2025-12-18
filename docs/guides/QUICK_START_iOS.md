@@ -74,6 +74,19 @@ All 32 NFL teams have custom gradient designs with official colors:
 - Consistent sizing across app
 - Shadow effects for depth
 
+### Team icon images
+
+- You can import official team images (helmets/logos) from an external `backend` repo and use them in the app.
+- Use the script `./scripts/import_team_images.sh` to convert images (webp/jpg/jpeg/png) and remove backgrounds. Example:
+
+```bash
+./scripts/import_team_images.sh \
+    /path/to/backend/Sources/Teams \
+    /path/to/OutcomePredictor/NFLOutcomePredictor/Assets.xcassets
+```
+
+- Imported images create assets named `team_<ABBR>` and the app will automatically use them when available (fallback to built-in helmet rendering otherwise).
+
 ## App structure
 
 ```txt

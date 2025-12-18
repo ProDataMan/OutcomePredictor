@@ -5,8 +5,10 @@ struct TeamDetailView: View {
     @StateObject private var dataManager = DataManager.shared
     @State private var games: [GameDTO] = []
     @State private var news: [ArticleDTO] = []
+    @State private var roster: TeamRosterDTO?
     @State private var isLoadingGames = false
     @State private var isLoadingNews = false
+    @State private var isLoadingRoster = false
     @State private var selectedSeason = Calendar.current.component(.year, from: Date())
     @State private var error: String?
 
@@ -63,6 +65,27 @@ struct TeamDetailView: View {
                     }
                 }
 
+                // Player Stats section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Key Players")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+
+                    if isLoadingRoster {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    } else if let roster = roster {
+                        PlayerStatsSection(roster: roster)
+                    } else {
+                        Text("Player stats unavailable")
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    }
+                }
+
                 // News section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Latest News")
@@ -94,6 +117,7 @@ struct TeamDetailView: View {
         .task {
             await loadGames()
             await loadNews()
+            await loadRoster()
         }
     }
 
@@ -124,6 +148,176 @@ struct TeamDetailView: View {
         }
 
         isLoadingNews = false
+    }
+
+    private func loadRoster() async {
+        isLoadingRoster = true
+
+        do {
+            let apiClient = APIClient()
+            roster = try await apiClient.fetchRoster(teamAbbreviation: team.abbreviation, season: selectedSeason)
+        } catch {
+            // Silently fail - roster is not critical
+            roster = nil
+        }
+
+        isLoadingRoster = false
+    }
+}
+
+// MARK: - Player Stats Section
+
+struct PlayerStatsSection: View {
+    let roster: TeamRosterDTO
+
+    var keyPlayers: [PlayerDTO] {
+        // Show QBs, top RBs, top WRs, top TEs
+        let qbs = roster.players.filter { $0.position == "QB" }
+        let rbs = roster.players.filter { $0.position == "RB" }.sorted {
+            ($0.stats?.rushingYards ?? 0) > ($1.stats?.rushingYards ?? 0)
+        }.prefix(2)
+        let wrs = roster.players.filter { $0.position == "WR" }.sorted {
+            ($0.stats?.receivingYards ?? 0) > ($1.stats?.receivingYards ?? 0)
+        }.prefix(2)
+        let tes = roster.players.filter { $0.position == "TE" }.sorted {
+            ($0.stats?.receivingYards ?? 0) > ($1.stats?.receivingYards ?? 0)
+        }.prefix(1)
+
+        return Array(qbs) + Array(rbs) + Array(wrs) + Array(tes)
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            ForEach(keyPlayers) { player in
+                PlayerStatCard(player: player)
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+struct PlayerStatCard: View {
+    let player: PlayerDTO
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Player photo or icon
+            if let photoURL = player.photoURL, let url = URL(string: photoURL) {
+                AsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Circle()
+                        .fill(Color.gray.opacity(0.3))
+                }
+                .frame(width: 50, height: 50)
+                .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 50, height: 50)
+                    .overlay(
+                        Text(player.position)
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    )
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(player.name)
+                        .font(.headline)
+                    if let jersey = player.jerseyNumber {
+                        Text("#\(jersey)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Text(player.position)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                if let stats = player.stats {
+                    PlayerStatsRow(player: player, stats: stats)
+                }
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+}
+
+struct PlayerStatsRow: View {
+    let player: PlayerDTO
+    let stats: PlayerStatsDTO
+
+    var body: some View {
+        HStack(spacing: 16) {
+            switch player.position {
+            case "QB":
+                if let yards = stats.passingYards {
+                    StatPill(label: "YDS", value: "\(yards)")
+                }
+                if let tds = stats.passingTouchdowns {
+                    StatPill(label: "TD", value: "\(tds)")
+                }
+                if let ints = stats.passingInterceptions {
+                    StatPill(label: "INT", value: "\(ints)")
+                }
+
+            case "RB":
+                if let yards = stats.rushingYards {
+                    StatPill(label: "YDS", value: "\(yards)")
+                }
+                if let tds = stats.rushingTouchdowns {
+                    StatPill(label: "TD", value: "\(tds)")
+                }
+
+            case "WR", "TE":
+                if let yards = stats.receivingYards {
+                    StatPill(label: "YDS", value: "\(yards)")
+                }
+                if let tds = stats.receivingTouchdowns {
+                    StatPill(label: "TD", value: "\(tds)")
+                }
+                if let rec = stats.receptions {
+                    StatPill(label: "REC", value: "\(rec)")
+                }
+
+            default:
+                if let tackles = stats.tackles {
+                    StatPill(label: "TKL", value: "\(tackles)")
+                }
+                if let sacks = stats.sacks {
+                    StatPill(label: "SCK", value: String(format: "%.1f", sacks))
+                }
+            }
+        }
+    }
+}
+
+struct StatPill: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.caption)
+                .fontWeight(.bold)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.accentColor.opacity(0.1))
+        .cornerRadius(6)
     }
 }
 
