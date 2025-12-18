@@ -12,12 +12,6 @@ extension GameDTO {
     }
 }
 
-extension ArticleDTO: Identifiable {
-    public var id: String {
-        "\(title)-\(publishedDate.timeIntervalSince1970)"
-    }
-}
-
 extension PredictionDTO {
     var homeTeamAbbreviation: String {
         homeTeam.abbreviation

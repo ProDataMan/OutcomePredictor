@@ -134,13 +134,18 @@ public typealias Game = GameDTO
 // MARK: - Article DTO
 
 /// News article for API responses.
-public struct ArticleDTO: Codable, Sendable {
+public struct ArticleDTO: Codable, Sendable, Identifiable {
     public let title: String
     public let content: String
     public let source: String
     public let publishedDate: Date
     public let teamAbbreviations: [String]
     public let url: String?
+
+    // Use title + publishedDate as unique identifier
+    public var id: String {
+        "\(title)-\(publishedDate.timeIntervalSince1970)"
+    }
 
     public init(
         title: String,
@@ -375,6 +380,110 @@ public struct PredictionRequest: Codable, Sendable {
         self.awayTeamAbbreviation = awayTeamAbbreviation
         self.scheduledDate = scheduledDate
         self.week = week
+        self.season = season
+    }
+}
+
+// MARK: - Player DTOs
+
+/// Player information for mobile app.
+public struct PlayerDTO: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let position: String
+    public let jerseyNumber: String?
+    public let photoURL: String?
+    public let stats: PlayerStatsDTO?
+
+    public init(
+        id: String,
+        name: String,
+        position: String,
+        jerseyNumber: String? = nil,
+        photoURL: String? = nil,
+        stats: PlayerStatsDTO? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.position = position
+        self.jerseyNumber = jerseyNumber
+        self.photoURL = photoURL
+        self.stats = stats
+    }
+}
+
+/// Player statistics for mobile app.
+public struct PlayerStatsDTO: Codable, Sendable {
+    public let passingYards: Int?
+    public let passingTouchdowns: Int?
+    public let passingInterceptions: Int?
+    public let passingCompletions: Int?
+    public let passingAttempts: Int?
+    public let rushingYards: Int?
+    public let rushingTouchdowns: Int?
+    public let rushingAttempts: Int?
+    public let receivingYards: Int?
+    public let receivingTouchdowns: Int?
+    public let receptions: Int?
+    public let targets: Int?
+    public let tackles: Int?
+    public let sacks: Double?
+    public let interceptions: Int?
+
+    public init(
+        passingYards: Int? = nil,
+        passingTouchdowns: Int? = nil,
+        passingInterceptions: Int? = nil,
+        passingCompletions: Int? = nil,
+        passingAttempts: Int? = nil,
+        rushingYards: Int? = nil,
+        rushingTouchdowns: Int? = nil,
+        rushingAttempts: Int? = nil,
+        receivingYards: Int? = nil,
+        receivingTouchdowns: Int? = nil,
+        receptions: Int? = nil,
+        targets: Int? = nil,
+        tackles: Int? = nil,
+        sacks: Double? = nil,
+        interceptions: Int? = nil
+    ) {
+        self.passingYards = passingYards
+        self.passingTouchdowns = passingTouchdowns
+        self.passingInterceptions = passingInterceptions
+        self.passingCompletions = passingCompletions
+        self.passingAttempts = passingAttempts
+        self.rushingYards = rushingYards
+        self.rushingTouchdowns = rushingTouchdowns
+        self.rushingAttempts = rushingAttempts
+        self.receivingYards = receivingYards
+        self.receivingTouchdowns = receivingTouchdowns
+        self.receptions = receptions
+        self.targets = targets
+        self.tackles = tackles
+        self.sacks = sacks
+        self.interceptions = interceptions
+    }
+
+    public var passingCompletionPercentage: Double? {
+        guard let comp = passingCompletions, let att = passingAttempts, att > 0 else { return nil }
+        return (Double(comp) / Double(att)) * 100.0
+    }
+
+    public var yardsPerCarry: Double? {
+        guard let yards = rushingYards, let att = rushingAttempts, att > 0 else { return nil }
+        return Double(yards) / Double(att)
+    }
+}
+
+/// Team roster for mobile app.
+public struct TeamRosterDTO: Codable, Sendable {
+    public let team: TeamDTO
+    public let players: [PlayerDTO]
+    public let season: Int
+
+    public init(team: TeamDTO, players: [PlayerDTO], season: Int) {
+        self.team = team
+        self.players = players
         self.season = season
     }
 }

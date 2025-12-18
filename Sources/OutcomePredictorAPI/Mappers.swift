@@ -98,3 +98,48 @@ extension VegasOddsDTO {
         )
     }
 }
+
+extension PlayerDTO {
+    /// Convert from domain Player model to DTO.
+    public init(from player: Player) {
+        let stats: PlayerStatsDTO? = player.stats.map { s in
+            PlayerStatsDTO(
+                passingYards: s.passingYards,
+                passingTouchdowns: s.passingTouchdowns,
+                passingInterceptions: s.passingInterceptions,
+                passingCompletions: s.passingCompletions,
+                passingAttempts: s.passingAttempts,
+                rushingYards: s.rushingYards,
+                rushingTouchdowns: s.rushingTouchdowns,
+                rushingAttempts: s.rushingAttempts,
+                receivingYards: s.receivingYards,
+                receivingTouchdowns: s.receivingTouchdowns,
+                receptions: s.receptions,
+                targets: s.targets,
+                tackles: s.tackles,
+                sacks: s.sacks,
+                interceptions: s.interceptions
+            )
+        }
+
+        self.init(
+            id: player.id,
+            name: player.name,
+            position: player.position,
+            jerseyNumber: player.jerseyNumber,
+            photoURL: player.photoURL,
+            stats: stats
+        )
+    }
+}
+
+extension TeamRosterDTO {
+    /// Convert from domain TeamRoster model to DTO.
+    public init(from roster: TeamRoster) {
+        self.init(
+            team: TeamDTO(from: roster.team),
+            players: roster.players.map { PlayerDTO(from: $0) },
+            season: roster.season
+        )
+    }
+}

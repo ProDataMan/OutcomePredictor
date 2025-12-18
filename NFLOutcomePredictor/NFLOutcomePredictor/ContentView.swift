@@ -38,9 +38,9 @@ struct TeamsListView: View {
     private let conferences = ["All", "NFC", "AFC"]
 
     var filteredTeams: [TeamDTO] {
-        // Conference filtering not available with basic TeamDTO
-        // All teams shown for now
-        return dataManager.teams.sorted { $0.name < $1.name }
+        let teams = dataManager.teams
+        let filtered = selectedConference == "All" ? teams : teams.filter { $0.conference == selectedConference }
+        return filtered.sorted { $0.name < $1.name }
     }
 
     var body: some View {
@@ -117,7 +117,7 @@ struct TeamCardView: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            TeamHelmetView(teamAbbreviation: team.abbreviation, size: 80)
+            TeamIconView(teamAbbreviation: team.abbreviation, size: 80)
 
             VStack(spacing: 4) {
                 Text(team.name)

@@ -157,6 +157,24 @@ func routes(_ app: Application) throws {
         return articleDTOs
     }
 
+    // GET /api/v1/teams/{teamId}/roster - Get team roster with player stats
+    api.get("teams", ":teamId", "roster") { req async throws -> TeamRosterDTO in
+        guard let teamAbbr = req.parameters.get("teamId") else {
+            throw Abort(.badRequest, reason: "Missing team ID")
+        }
+
+        let season = req.query[Int.self, at: "season"] ?? Calendar.current.component(.year, from: Date())
+
+        guard let team = NFLTeams.team(abbreviation: teamAbbr) else {
+            throw Abort(.notFound, reason: "Team not found: \(teamAbbr)")
+        }
+
+        let playerDataSource = ESPNPlayerDataSource()
+        let roster = try await playerDataSource.fetchRoster(for: team, season: season)
+
+        return TeamRosterDTO(from: roster)
+    }
+
     // POST /api/v1/predictions - Make a prediction
     api.post("predictions") { req async throws -> PredictionDTO in
         let predictionReq = try req.content.decode(PredictionRequest.self)
@@ -188,7 +206,23 @@ func routes(_ app: Application) throws {
         }
 
         let gameRepo = InMemoryGameRepository(games: allGames)
-        let predictor = BaselinePredictor(gameRepository: gameRepo)
+
+        // Setup enhanced predictor with injury tracking and news analysis
+        let injuryDataSource = ESPNInjuryDataSource()
+        let injuryTracker = InjuryTracker(dataSource: injuryDataSource)
+
+        guard let dataLoader = req.application.storage[DataLoaderKey.self] else {
+            throw Abort(.internalServerError, reason: "Data loader not initialized")
+        }
+
+        let newsDataSource = RealNewsDataSource(dataLoader: dataLoader)
+        let newsAnalyzer = NewsAnalyzer(newsDataSource: newsDataSource)
+
+        let predictor = EnhancedPredictor(
+            gameRepository: gameRepo,
+            injuryTracker: injuryTracker,
+            newsAnalyzer: newsAnalyzer
+        )
 
         // Create game to predict
         let scheduledDate = predictionReq.scheduledDate ?? Date().addingTimeInterval(86400 * 7)

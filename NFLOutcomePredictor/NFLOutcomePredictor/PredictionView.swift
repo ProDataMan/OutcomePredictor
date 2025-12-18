@@ -5,7 +5,7 @@ struct PredictionView: View {
     @State private var homeTeam: TeamDTO?
     @State private var awayTeam: TeamDTO?
     @State private var selectedSeason = Calendar.current.component(.year, from: Date())
-    @State private var selectedWeek = 1
+    @State private var selectedWeek: Int?
     @State private var prediction: PredictionResult?
     @State private var isLoadingPrediction = false
     @State private var predictionError: String?
@@ -16,6 +16,31 @@ struct PredictionView: View {
     // Task management for predictions only
     @State private var predictionTask: Task<Void, Never>?
 
+    // Current week number for highlighting and disabling past weeks
+    private var currentWeek: Int? {
+        dataManager.upcomingGames.first?.week
+    }
+
+    // Available weeks from upcoming games
+    private var availableWeeks: [Int] {
+        let weeks = Set(dataManager.upcomingGames.compactMap { $0.week })
+        return weeks.sorted()
+    }
+
+    // Check if a week is in the past
+    private func isPastWeek(_ week: Int) -> Bool {
+        guard let currentWeek = currentWeek else { return false }
+        return week < currentWeek
+    }
+
+    // Filter games by selected week
+    private var filteredGames: [GameDTO] {
+        guard let selectedWeek = selectedWeek else {
+            return dataManager.upcomingGames
+        }
+        return dataManager.upcomingGames.filter { $0.week == selectedWeek }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -25,13 +50,68 @@ struct PredictionView: View {
                         .padding(.horizontal)
                         .padding(.top, 8)
 
+                    // Week filter
+                    if !availableWeeks.isEmpty {
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("Filter by Week:")
+                                    .font(.headline)
+                                Picker("Week", selection: $selectedWeek) {
+                                    Text("All Weeks").tag(nil as Int?)
+                                    ForEach(availableWeeks, id: \.self) { week in
+                                        HStack {
+                                            if week == currentWeek {
+                                                Image(systemName: "star.fill")
+                                                    .foregroundColor(.yellow)
+                                            }
+                                            Text("Week \(week)")
+                                        }
+                                        .tag(week as Int?)
+                                        .foregroundColor(isPastWeek(week) ? .secondary : .primary)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .onChange(of: selectedWeek) { _ in
+                                    // Clear selection when week changes
+                                    selectedUpcomingGameIndex = nil
+                                }
+                            }
+                            .padding(.horizontal)
+
+                            // Show current week indicator
+                            if let currentWeek = currentWeek {
+                                if selectedWeek == nil {
+                                    Text("Showing all weeks • Current: Week \(currentWeek)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .padding(.horizontal)
+                                } else if selectedWeek == currentWeek {
+                                    Text("Current Week")
+                                        .font(.caption2)
+                                        .foregroundColor(.green)
+                                        .padding(.horizontal)
+                                } else if let selectedWeek = selectedWeek, isPastWeek(selectedWeek) {
+                                    Text("Past Week")
+                                        .font(.caption2)
+                                        .foregroundColor(.orange)
+                                        .padding(.horizontal)
+                                }
+                            }
+                        }
+                    }
+
                     // Upcoming games section
-                    if !dataManager.upcomingGames.isEmpty {
+                    if !filteredGames.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Upcoming Games")
                                     .font(.headline)
                                 Spacer()
+                                if let selectedWeek = selectedWeek {
+                                    Text("Week \(selectedWeek)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                                 Text("Tap to predict")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
@@ -40,7 +120,7 @@ struct PredictionView: View {
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
-                                    ForEach(Array(dataManager.upcomingGames.prefix(5).enumerated()), id: \.element.id) { index, game in
+                                    ForEach(Array(filteredGames.prefix(10).enumerated()), id: \.element.id) { index, game in
                                         UpcomingGameCard(game: game, isSelected: selectedUpcomingGameIndex == index)
                                             .onTapGesture {
                                                 selectUpcomingGame(at: index)
@@ -85,51 +165,6 @@ struct PredictionView: View {
                                 showingTeamPicker = true
                             }
                         )
-                    }
-                    .padding()
-
-                    // Season and week - For manual predictions
-                    VStack(spacing: 12) {
-                        Text("Manual Prediction Settings")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        HStack {
-                            Text("Season:")
-                                .font(.headline)
-                            Picker("Season", selection: $selectedSeason) {
-                                ForEach(2020...2025, id: \.self) { year in
-                                    Text(String(year)).tag(year)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .onChange(of: selectedSeason) { _ in
-                                // Clear prediction when season changes
-                                prediction = nil
-                            }
-                        }
-
-                        HStack {
-                            Text("Week:")
-                                .font(.headline)
-                            Picker("Week", selection: $selectedWeek) {
-                                ForEach(1...18, id: \.self) { week in
-                                    Text(String(week)).tag(week)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .onChange(of: selectedWeek) { _ in
-                                // Clear prediction when week changes
-                                prediction = nil
-                            }
-                            Spacer()
-                        }
-
-                        Text("Select teams above, then choose season/week and tap 'Make Prediction'")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding()
 
@@ -197,8 +232,13 @@ struct PredictionView: View {
                 await dataManager.loadTeams()
                 await dataManager.loadUpcomingGames()
 
+                // Auto-select current week
+                if selectedWeek == nil, let currentWeek = currentWeek {
+                    selectedWeek = currentWeek
+                }
+
                 // Auto-select first game if available
-                if !dataManager.upcomingGames.isEmpty && selectedUpcomingGameIndex == nil {
+                if !filteredGames.isEmpty && selectedUpcomingGameIndex == nil {
                     selectUpcomingGame(at: 0)
                 }
             }
@@ -210,14 +250,18 @@ struct PredictionView: View {
     }
 
     private func selectUpcomingGame(at index: Int) {
-        guard index < dataManager.upcomingGames.count else { return }
+        guard index < filteredGames.count else { return }
         selectedUpcomingGameIndex = index
 
-        let game = dataManager.upcomingGames[index]
+        let game = filteredGames[index]
         homeTeam = game.homeTeam
         awayTeam = game.awayTeam
         selectedSeason = game.season ?? Calendar.current.component(.year, from: Date())
-        selectedWeek = game.week ?? 1
+
+        // Update selected week to match the game's week
+        if let gameWeek = game.week {
+            selectedWeek = gameWeek
+        }
 
         // Auto-predict this game with proper task management
         makePredictionTask()
@@ -273,7 +317,7 @@ struct TeamPickerButton: View {
         Button(action: action) {
             VStack(spacing: 12) {
                 if let team = team {
-                    TeamHelmetView(teamAbbreviation: team.abbreviation, size: 60)
+                    TeamIconView(teamAbbreviation: team.abbreviation, size: 60)
                     Text(team.name)
                         .font(.headline)
                         .foregroundColor(.primary)
@@ -313,7 +357,7 @@ struct PredictionResultView: View {
 
             // Winner display
             VStack(spacing: 8) {
-                TeamHelmetView(teamAbbreviation: prediction.predictedWinner, size: 80)
+                TeamIconView(teamAbbreviation: prediction.predictedWinner, size: 80)
 
                 Text("\(Int(prediction.confidence * 100))% Win Probability")
                     .font(.headline)
@@ -401,7 +445,7 @@ struct TeamPickerSheet: View {
                         dismiss()
                     } label: {
                         HStack {
-                            TeamHelmetView(teamAbbreviation: team.abbreviation, size: 40)
+                            TeamIconView(teamAbbreviation: team.abbreviation, size: 40)
                             VStack(alignment: .leading) {
                                 Text(team.name)
                                     .font(.headline)
@@ -450,7 +494,7 @@ struct UpcomingGameCard: View {
             // Teams
             HStack(spacing: 12) {
                 VStack(spacing: 4) {
-                    TeamHelmetView(teamAbbreviation: game.awayTeam.abbreviation, size: 30)
+                    TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 30)
                     Text(game.awayTeam.abbreviation)
                         .font(.caption2)
                         .fontWeight(.semibold)
@@ -461,7 +505,7 @@ struct UpcomingGameCard: View {
                     .foregroundColor(.secondary)
 
                 VStack(spacing: 4) {
-                    TeamHelmetView(teamAbbreviation: game.homeTeam.abbreviation, size: 30)
+                    TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 30)
                     Text(game.homeTeam.abbreviation)
                         .font(.caption2)
                         .fontWeight(.semibold)

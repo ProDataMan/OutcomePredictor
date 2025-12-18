@@ -80,7 +80,7 @@ struct TeamDetailView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                     } else {
-                        ForEach(news, id: \.id) { article in
+                        ForEach(news) { article in
                             NewsCardView(article: article)
                         }
                         .padding(.horizontal)
@@ -92,13 +92,9 @@ struct TeamDetailView: View {
         .navigationTitle(team.name)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await loadData()
+            await loadGames()
+            await loadNews()
         }
-    }
-
-    private func loadData() async {
-        await loadGames()
-        await loadNews()
     }
 
     private func loadGames() async {
@@ -118,9 +114,15 @@ struct TeamDetailView: View {
 
     private func loadNews() async {
         isLoadingNews = true
-        // News functionality not implemented in current API
-        // Leave news array empty for now
-        news = []
+
+        do {
+            let apiClient = APIClient()
+            news = try await apiClient.fetchNews(teamAbbreviation: team.abbreviation, limit: 5)
+        } catch {
+            // Silently fail - news is not critical
+            news = []
+        }
+
         isLoadingNews = false
     }
 }
@@ -130,7 +132,7 @@ struct TeamHeaderView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            TeamHelmetView(teamAbbreviation: team.abbreviation, size: 120)
+            TeamIconView(teamAbbreviation: team.abbreviation, size: 120)
 
             VStack(spacing: 4) {
                 Text(team.name)
@@ -201,7 +203,7 @@ struct GameCardView: View {
                         .foregroundColor(.secondary)
                         .frame(width: 20)
 
-                    TeamHelmetView(teamAbbreviation: opponent, size: 32)
+                    TeamIconView(teamAbbreviation: opponent, size: 32)
 
                     Text(opponent)
                         .font(.headline)
@@ -236,6 +238,13 @@ struct NewsCardView: View {
                 .font(.headline)
                 .lineLimit(2)
 
+            if !article.content.isEmpty {
+                Text(article.content)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+            }
+
             HStack {
                 Text(article.source)
                     .font(.caption)
@@ -247,12 +256,26 @@ struct NewsCardView: View {
                 Text(article.publishedDate, style: .date)
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                Spacer()
+
+                if article.url != nil {
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let urlString = article.url, let url = URL(string: urlString) {
+                UIApplication.shared.open(url)
+            }
+        }
     }
 }
 

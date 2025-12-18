@@ -37,6 +37,16 @@ final class APIClient: ObservableObject {
             let (data, _) = try await urlSession.data(from: url)
             return try decoder.decode([TeamDTO].self, from: data)
         } catch {
+            // If the task was cancelled (for example due to a newer request), don't report
+            // it as an unexpected error — just rethrow so callers can handle cancellation.
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
             ErrorHandler.shared.handle(error, context: "Failed to fetch NFL teams")
             throw error
         }
@@ -49,6 +59,14 @@ final class APIClient: ObservableObject {
             let (data, _) = try await urlSession.data(from: url)
             return try decoder.decode([GameDTO].self, from: data)
         } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
             ErrorHandler.shared.handle(error, context: "Failed to fetch upcoming games")
             throw error
         }
@@ -61,6 +79,14 @@ final class APIClient: ObservableObject {
             let (data, _) = try await urlSession.data(from: url)
             return try decoder.decode(CurrentWeekResponse.self, from: data)
         } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
             ErrorHandler.shared.handle(error, context: "Failed to fetch current week games")
             throw error
         }
@@ -73,6 +99,14 @@ final class APIClient: ObservableObject {
             let (data, _) = try await urlSession.data(from: url)
             return try decoder.decode(TeamDetail.self, from: data)
         } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
             ErrorHandler.shared.handle(error, context: "Failed to fetch team details for \(teamId)")
             throw error
         }
@@ -123,7 +157,35 @@ final class APIClient: ObservableObject {
                 modelVersion: "Production API v1.0"
             )
         } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
             ErrorHandler.shared.handle(error, context: "Failed to make prediction for \(away) @ \(home)")
+            throw error
+        }
+    }
+
+    /// Fetches news articles for a specific team.
+    func fetchNews(teamAbbreviation: String, limit: Int = 10) async throws -> [ArticleDTO] {
+        do {
+            let url = URL(string: "\(baseURL)/news?team=\(teamAbbreviation)&limit=\(limit)")!
+            let (data, _) = try await urlSession.data(from: url)
+            return try decoder.decode([ArticleDTO].self, from: data)
+        } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
+            ErrorHandler.shared.handle(error, context: "Failed to fetch news for team \(teamAbbreviation)")
             throw error
         }
     }
