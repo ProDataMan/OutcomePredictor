@@ -40,11 +40,11 @@ struct CurrentWeekStatusView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 if let week = currentWeek {
-                    Text("Week \(week) • \(currentSeason)")
+                    Text("Week \(week) • \(currentSeason.formatted(.number.grouping(.never)))")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 } else {
-                    Text("\(currentSeason) Season")
+                    Text("\(currentSeason.formatted(.number.grouping(.never))) Season")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
