@@ -40,29 +40,33 @@ public struct ESPNPlayerDataSource: Sendable {
     private func parseRoster(from espnRoster: ESPNRosterResponse, team: Team, season: Int) -> TeamRoster {
         var players: [Player] = []
 
-        for athlete in espnRoster.athletes {
-            guard let displayName = athlete.displayName,
-                  let position = athlete.position?.abbreviation else {
-                continue
+        // Iterate through position groups
+        for positionGroup in espnRoster.athletes {
+            // Iterate through players in each position group
+            for athlete in positionGroup.items {
+                guard let displayName = athlete.displayName,
+                      let position = athlete.position?.abbreviation else {
+                    continue
+                }
+
+                // Parse stats if available
+                var stats: PlayerStats? = nil
+                if let athleteStats = athlete.statistics, !athleteStats.isEmpty {
+                    stats = parsePlayerStats(athleteStats, position: position)
+                }
+
+                let player = Player(
+                    id: athlete.id,
+                    name: displayName,
+                    position: position,
+                    jerseyNumber: athlete.jersey,
+                    photoURL: athlete.headshot?.href,
+                    team: team,
+                    stats: stats
+                )
+
+                players.append(player)
             }
-
-            // Parse stats if available
-            var stats: PlayerStats? = nil
-            if let athleteStats = athlete.statistics, !athleteStats.isEmpty {
-                stats = parsePlayerStats(athleteStats, position: position)
-            }
-
-            let player = Player(
-                id: athlete.id,
-                name: displayName,
-                position: position,
-                jerseyNumber: athlete.jersey,
-                photoURL: athlete.headshot?.href,
-                team: team,
-                stats: stats
-            )
-
-            players.append(player)
         }
 
         return TeamRoster(team: team, players: players, season: season)
@@ -137,7 +141,12 @@ public struct ESPNPlayerDataSource: Sendable {
 // MARK: - ESPN API Models
 
 private struct ESPNRosterResponse: Codable {
-    let athletes: [ESPNAthlete]
+    let athletes: [ESPNPositionGroup]
+}
+
+private struct ESPNPositionGroup: Codable {
+    let position: String
+    let items: [ESPNAthlete]
 }
 
 private struct ESPNAthlete: Codable {
