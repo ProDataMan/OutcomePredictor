@@ -115,8 +115,15 @@ final class APIClient: ObservableObject {
     /// Makes a prediction for a game between two teams.
     func makePrediction(
         home: String,
-        away: String
+        away: String,
+        season: Int? = nil
     ) async throws -> PredictionResult {
+        // Vapor error response structure
+        struct VaporErrorResponse: Codable {
+            let error: Bool
+            let reason: String
+        }
+
         do {
             let url = URL(string: "\(baseURL)/predictions")!
             var request = URLRequest(url: url)
@@ -136,16 +143,32 @@ final class APIClient: ObservableObject {
                 }
             }
 
+            // Use provided season or default to current year
+            let requestSeason = season ?? Calendar.current.component(.year, from: Date())
+
             let requestBody = PredictionRequest(
                 homeTeamAbbreviation: home,
                 awayTeamAbbreviation: away,
-                season: Calendar.current.component(.year, from: Date())
+                season: requestSeason
             )
 
             let encoder = JSONEncoder()
             request.httpBody = try encoder.encode(requestBody)
 
             let (data, _) = try await urlSession.data(for: request)
+
+            // First check if the response is a Vapor error response
+            if let errorResponse = try? decoder.decode(VaporErrorResponse.self, from: data),
+               errorResponse.error {
+                throw NSError(
+                    domain: "APIClient",
+                    code: -1,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: errorResponse.reason,
+                        NSLocalizedFailureReasonErrorKey: "Server returned error for \(away) @ \(home)"
+                    ]
+                )
+            }
 
             // The API returns PredictionDTO but we need to map it to PredictionResult
             let predictionDTO = try decoder.decode(PredictionDTO.self, from: data)

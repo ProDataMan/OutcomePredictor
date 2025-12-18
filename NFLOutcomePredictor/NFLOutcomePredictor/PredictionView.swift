@@ -288,7 +288,8 @@ struct PredictionView: View {
         do {
             let result = try await dataManager.makePrediction(
                 home: homeTeam.abbreviation,
-                away: awayTeam.abbreviation
+                away: awayTeam.abbreviation,
+                season: selectedSeason
             )
 
             // Check if task was cancelled

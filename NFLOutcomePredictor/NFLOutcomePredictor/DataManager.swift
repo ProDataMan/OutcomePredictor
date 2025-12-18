@@ -107,8 +107,8 @@ final class DataManager: ObservableObject {
     }
 
     /// Makes a prediction using the shared API client.
-    func makePrediction(home: String, away: String) async throws -> PredictionResult {
-        return try await apiClient.makePrediction(home: home, away: away)
+    func makePrediction(home: String, away: String, season: Int? = nil) async throws -> PredictionResult {
+        return try await apiClient.makePrediction(home: home, away: away, season: season)
     }
 
     /// Clears all cached data and forces a reload.
