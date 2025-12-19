@@ -50,6 +50,18 @@ func configure(_ app: Application) async throws {
     let oddsCache = OddsCache()
     app.storage[OddsCacheKey.self] = oddsCache
 
+    // Setup API-Sports data source with caching (15 minute TTL)
+    // Get API key from environment or use a default for testing
+    let apiSportsKey = Environment.get("API_SPORTS_KEY")
+    if let apiKey = apiSportsKey {
+        let apiSportsDataSource = APISportsDataSource(apiKey: apiKey, cacheTTL: 900) // 15 minutes
+        app.storage[APISportsDataSourceKey.self] = apiSportsDataSource
+        print("✅ API-Sports data source initialized with 15-minute caching")
+    } else {
+        print("⚠️ API-Sports API key not found in environment (API_SPORTS_KEY)")
+        print("   Player stats will use ESPN data (sample stats only)")
+    }
+
     // Register routes
     try routes(app)
 }
@@ -67,6 +79,11 @@ struct OddsDataSourceKey: StorageKey {
 // Storage key for Odds Cache
 struct OddsCacheKey: StorageKey {
     typealias Value = OddsCache
+}
+
+// Storage key for API-Sports DataSource
+struct APISportsDataSourceKey: StorageKey {
+    typealias Value = APISportsDataSource
 }
 
 func routes(_ app: Application) throws {
@@ -169,8 +186,25 @@ func routes(_ app: Application) throws {
             throw Abort(.notFound, reason: "Team not found: \(teamAbbr)")
         }
 
-        let playerDataSource = ESPNPlayerDataSource()
-        let roster = try await playerDataSource.fetchRoster(for: team, season: season)
+        // Try API-Sports first (real stats and headshots from 2022+)
+        if let apiSportsDataSource = req.application.storage[APISportsDataSourceKey.self],
+           season >= 2022 {
+            do {
+                print("🏈 Fetching roster from API-Sports for \(teamAbbr) (season \(season))")
+                let roster = try await apiSportsDataSource.fetchRoster(for: team, season: season)
+                print("✅ Successfully fetched \(roster.players.count) players from API-Sports")
+                return TeamRosterDTO(from: roster)
+            } catch {
+                print("⚠️ API-Sports failed for \(teamAbbr): \(error.localizedDescription)")
+                print("   Falling back to ESPN data source")
+                // Fall through to ESPN fallback
+            }
+        }
+
+        // Fallback to ESPN (sample stats, but still has headshots for most players)
+        print("📡 Using ESPN data source for \(teamAbbr) (season \(season))")
+        let espnPlayerDataSource = ESPNPlayerDataSource()
+        let roster = try await espnPlayerDataSource.fetchRoster(for: team, season: season)
 
         return TeamRosterDTO(from: roster)
     }
@@ -316,4 +350,75 @@ func routes(_ app: Application) throws {
 
         return predictionDTO
     }
+
+    // GET /api/v1/cache/stats - Get cache statistics (for monitoring)
+    api.get("cache", "stats") { req async throws -> CacheStatsResponse in
+        var apiSportsStats: APISportsCacheStats?
+
+        // API-Sports cache stats
+        if let apiSportsDataSource = req.application.storage[APISportsDataSourceKey.self] {
+            let cacheStats = await apiSportsDataSource.getCacheStats()
+            apiSportsStats = APISportsCacheStats(
+                rosterCacheCount: cacheStats.count,
+                oldestEntry: cacheStats.oldestEntry?.ISO8601Format(),
+                newestEntry: cacheStats.newestEntry?.ISO8601Format(),
+                ttlMinutes: 15
+            )
+        }
+
+        // Odds cache stats
+        var oddsCacheHasData = false
+        if let oddsCache = req.application.storage[OddsCacheKey.self] {
+            oddsCacheHasData = await oddsCache.getOdds() != nil
+        }
+
+        return CacheStatsResponse(
+            apiSports: apiSportsStats,
+            oddsCache: OddsCacheStats(hasData: oddsCacheHasData, ttlHours: 6),
+            timestamp: Date().ISO8601Format()
+        )
+    }
+
+    // POST /api/v1/cache/clear - Clear API-Sports cache (admin endpoint)
+    api.post("cache", "clear") { req async throws -> MessageResponse in
+        if let apiSportsDataSource = req.application.storage[APISportsDataSourceKey.self] {
+            await apiSportsDataSource.clearCaches()
+            return MessageResponse(message: "API-Sports caches cleared successfully")
+        }
+        throw Abort(.notFound, reason: "API-Sports data source not configured")
+    }
+
+    // POST /api/v1/cache/cleanup - Clean up expired cache entries
+    api.post("cache", "cleanup") { req async throws -> MessageResponse in
+        if let apiSportsDataSource = req.application.storage[APISportsDataSourceKey.self] {
+            await apiSportsDataSource.cleanupExpiredCache()
+            return MessageResponse(message: "Expired cache entries cleaned up")
+        }
+        throw Abort(.notFound, reason: "API-Sports data source not configured")
+    }
 }
+
+// MARK: - Response Models
+
+struct CacheStatsResponse: Content {
+    let apiSports: APISportsCacheStats?
+    let oddsCache: OddsCacheStats
+    let timestamp: String
+}
+
+struct APISportsCacheStats: Content {
+    let rosterCacheCount: Int
+    let oldestEntry: String?
+    let newestEntry: String?
+    let ttlMinutes: Int
+}
+
+struct OddsCacheStats: Content {
+    let hasData: Bool
+    let ttlHours: Int
+}
+
+struct MessageResponse: Content {
+    let message: String
+}
+
