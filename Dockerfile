@@ -12,6 +12,7 @@ RUN swift package resolve
 # Copy source code
 COPY Sources ./Sources
 COPY Tests ./Tests
+COPY Public ./Public
 
 # Build the application
 RUN swift build --configuration release --product nfl-server
@@ -33,6 +34,9 @@ WORKDIR /app
 
 # Copy the built executable
 COPY --from=build /app/.build/release/nfl-server ./nfl-server
+
+# Copy static files for website hosting
+COPY --from=build /app/Public ./Public
 
 # Create non-root user
 RUN useradd -m -s /bin/bash appuser
