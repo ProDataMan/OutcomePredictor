@@ -85,10 +85,12 @@ public struct GameDTO: Codable, Sendable {
     public let homeScore: Int?
     public let awayScore: Int?
     public let status: String?
+    public let quarter: String?
+    public let timeRemaining: String?
 
     // Custom mapping for scheduled_date -> date
     enum CodingKeys: String, CodingKey {
-        case id, homeTeam, awayTeam, week, season, homeScore, awayScore, status
+        case id, homeTeam, awayTeam, week, season, homeScore, awayScore, status, quarter, timeRemaining
         case date = "scheduledDate"  // Maps to scheduled_date via snake_case conversion
     }
 
@@ -101,7 +103,9 @@ public struct GameDTO: Codable, Sendable {
         season: Int? = nil,
         homeScore: Int? = nil,
         awayScore: Int? = nil,
-        status: String? = nil
+        status: String? = nil,
+        quarter: String? = nil,
+        timeRemaining: String? = nil
     ) {
         self.id = id
         self.homeTeam = homeTeam
@@ -112,6 +116,8 @@ public struct GameDTO: Codable, Sendable {
         self.homeScore = homeScore
         self.awayScore = awayScore
         self.status = status
+        self.quarter = quarter
+        self.timeRemaining = timeRemaining
     }
 }
 

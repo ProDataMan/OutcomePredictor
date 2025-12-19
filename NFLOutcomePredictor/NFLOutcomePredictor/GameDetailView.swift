@@ -11,6 +11,8 @@ struct GameDetailView: View {
     @State private var upcomingGames: [GameDTO] = []
     @State private var news: [ArticleDTO] = []
     @State private var isLoadingNews = false
+    @State private var historicalGames: [GameDTO] = []
+    @State private var isLoadingHistory = false
 
     init(game: GameDTO, sourceTeam: TeamDTO? = nil) {
         self.game = game
@@ -18,7 +20,11 @@ struct GameDetailView: View {
     }
 
     private var isCompleted: Bool {
-        game.homeScore != nil && game.awayScore != nil
+        game.status?.lowercased() == "final" || (game.homeScore != nil && game.awayScore != nil && game.status?.lowercased() != "in progress")
+    }
+
+    private var isInProgress: Bool {
+        game.status?.lowercased() == "in progress" || (game.date < Date() && !isCompleted)
     }
 
     private var winner: String? {
@@ -49,8 +55,13 @@ struct GameDetailView: View {
                 teamMatchupCard
 
                 // Prediction (for upcoming games)
-                if !isCompleted {
+                if !isCompleted && !isInProgress {
                     predictionCard
+                }
+
+                // Live game status (for in-progress games)
+                if isInProgress {
+                    liveGameCard
                 }
 
                 // Weather forecast (for upcoming games)
@@ -85,6 +96,7 @@ struct GameDetailView: View {
             await loadPrediction()
             await loadUpcomingGames()
             await loadNews()
+            await loadHistoricalMatchup()
         }
     }
 
@@ -315,18 +327,167 @@ struct GameDetailView: View {
             Text("Series History")
                 .font(.headline)
 
-            Text("Historical matchup data coming soon")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding()
+            if isLoadingHistory {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            } else if historicalGames.isEmpty {
+                Text("No previous matchups found")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            } else {
+                VStack(spacing: 4) {
+                    // Series record
+                    seriesRecord
 
-            // This would show last 5-10 games between these teams
+                    Divider()
+                        .padding(.vertical, 8)
+
+                    // Recent games
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Last \(min(historicalGames.count, 5)) Meetings")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+
+                        ForEach(historicalGames.prefix(5), id: \.id) { historicalGame in
+                            HistoricalGameRow(
+                                game: historicalGame,
+                                currentHomeTeam: game.homeTeam.abbreviation,
+                                currentAwayTeam: game.awayTeam.abbreviation
+                            )
+                        }
+                    }
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+    }
+
+    private var seriesRecord: some View {
+        let homeWins = historicalGames.filter { game in
+            guard let homeScore = game.homeScore, let awayScore = game.awayScore else { return false }
+            if game.homeTeam.abbreviation == self.game.homeTeam.abbreviation {
+                return homeScore > awayScore
+            } else {
+                return awayScore > homeScore
+            }
+        }.count
+
+        let awayWins = historicalGames.filter { game in
+            guard let homeScore = game.homeScore, let awayScore = game.awayScore else { return false }
+            if game.awayTeam.abbreviation == self.game.awayTeam.abbreviation {
+                return homeScore < awayScore
+            } else {
+                return awayScore < homeScore
+            }
+        }.count
+
+        return HStack(spacing: 20) {
+            VStack {
+                TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 40)
+                Text("\(homeWins)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Text("wins")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+
+            Text("vs")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            VStack {
+                TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 40)
+                Text("\(awayWins)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Text("wins")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+    }
+
+    // MARK: - Live Game
+
+    private var liveGameCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "livephoto.play")
+                    .foregroundColor(.red)
+                Text("LIVE")
+                    .font(.headline)
+                    .foregroundColor(.red)
+                    .fontWeight(.bold)
+            }
+
+            // Score display
+            HStack(spacing: 40) {
+                // Away team
+                VStack(spacing: 8) {
+                    TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 50)
+                    Text(game.awayTeam.abbreviation)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text("\(game.awayScore ?? 0)")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(winner == game.awayTeam.abbreviation ? .green : .primary)
+                }
+                .frame(maxWidth: .infinity)
+
+                // VS divider with game info
+                VStack(spacing: 4) {
+                    Text("@")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
+
+                    if let quarter = game.quarter {
+                        Text(quarter)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    if let timeRemaining = game.timeRemaining {
+                        Text(timeRemaining)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Home team
+                VStack(spacing: 8) {
+                    TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 50)
+                    Text(game.homeTeam.abbreviation)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text("\(game.homeScore ?? 0)")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(winner == game.homeTeam.abbreviation ? .green : .primary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.vertical)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.red, lineWidth: 2)
+        )
     }
 
     // MARK: - Prediction
@@ -576,6 +737,120 @@ struct GameDetailView: View {
 
         isLoadingNews = false
     }
+
+    private func loadHistoricalMatchup() async {
+        isLoadingHistory = true
+
+        do {
+            let apiClient = APIClient()
+
+            // Fetch games for both teams and find common matchups
+            let currentYear = Calendar.current.component(.year, from: Date())
+
+            var allGames: [GameDTO] = []
+
+            // Fetch last 5 seasons of games
+            for season in (currentYear - 4)...currentYear {
+                if let homeGames = try? await apiClient.fetchTeamGames(
+                    teamAbbreviation: game.homeTeam.abbreviation,
+                    season: season
+                ) {
+                    allGames.append(contentsOf: homeGames)
+                }
+            }
+
+            // Filter for games where both teams played each other
+            historicalGames = allGames.filter { historicalGame in
+                (historicalGame.homeTeam.abbreviation == game.homeTeam.abbreviation &&
+                 historicalGame.awayTeam.abbreviation == game.awayTeam.abbreviation) ||
+                (historicalGame.homeTeam.abbreviation == game.awayTeam.abbreviation &&
+                 historicalGame.awayTeam.abbreviation == game.homeTeam.abbreviation)
+            }
+            .filter { $0.homeScore != nil && $0.awayScore != nil } // Only completed games
+            .sorted { $0.date > $1.date } // Most recent first
+
+        } catch {
+            // Silently fail - historical data is not critical
+            historicalGames = []
+        }
+
+        isLoadingHistory = false
+    }
+}
+
+// Historical Game Row
+struct HistoricalGameRow: View {
+    let game: GameDTO
+    let currentHomeTeam: String
+    let currentAwayTeam: String
+
+    private var result: String {
+        guard let homeScore = game.homeScore, let awayScore = game.awayScore else {
+            return "N/A"
+        }
+
+        // Determine which team won from current matchup perspective
+        let homeWon: Bool
+        if game.homeTeam.abbreviation == currentHomeTeam {
+            homeWon = homeScore > awayScore
+        } else {
+            homeWon = awayScore > homeScore
+        }
+
+        let score: String
+        if game.homeTeam.abbreviation == currentHomeTeam {
+            score = "\(homeScore)-\(awayScore)"
+        } else {
+            score = "\(awayScore)-\(homeScore)"
+        }
+
+        return homeWon ? "W \(score)" : "L \(score)"
+    }
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 20)
+                    Text(game.homeTeam.abbreviation)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Text("\(game.homeScore ?? 0)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                HStack(spacing: 8) {
+                    TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 20)
+                    Text(game.awayTeam.abbreviation)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Text("\(game.awayScore ?? 0)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(result)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(result.hasPrefix("W") ? .green : .red)
+
+                if let season = game.season, let week = game.week {
+                    Text("\(season) Wk \(week)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 8)
+        .background(Color(.systemBackground))
+        .cornerRadius(6)
+    }
 }
 
 // Import UpcomingGameCard from PredictionView
@@ -637,10 +912,24 @@ struct NewsCardView: View {
     let article: ArticleDTO
 
     var body: some View {
+        Group {
+            if let urlString = article.url, let url = URL(string: urlString) {
+                Link(destination: url) {
+                    newsContent
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                newsContent
+            }
+        }
+    }
+
+    private var newsContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(article.title)
                 .font(.headline)
                 .lineLimit(2)
+                .foregroundColor(.primary)
 
             if !article.content.isEmpty {
                 Text(article.content)
@@ -664,7 +953,7 @@ struct NewsCardView: View {
                 Spacer()
 
                 if article.url != nil {
-                    Image(systemName: "arrow.up.right")
+                    Image(systemName: "arrow.up.right.square")
                         .font(.caption)
                         .foregroundColor(.accentColor)
                 }
@@ -674,12 +963,6 @@ struct NewsCardView: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(8)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if let urlString = article.url, let url = URL(string: urlString) {
-                UIApplication.shared.open(url)
-            }
-        }
     }
 }
 
