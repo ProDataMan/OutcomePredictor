@@ -61,9 +61,10 @@ struct FantasyView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(positions, id: \.self) { position in
-                        FilterChip(
+                        PositionFilterChip(
                             title: position,
-                            isSelected: selectedPosition == position
+                            isSelected: selectedPosition == position,
+                            isFull: position != "All" && fantasyManager.isPositionFull(position)
                         ) {
                             selectedPosition = position
                         }
@@ -102,19 +103,27 @@ struct FantasyView: View {
                     positionFilter: selectedPosition,
                     fantasyManager: fantasyManager
                 )
+            } else if selectedPosition != "All" {
+                // Show all players for selected position across all teams
+                AllPositionPlayersView(
+                    position: selectedPosition,
+                    fantasyManager: fantasyManager
+                )
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "person.3.fill")
                         .font(.system(size: 60))
                         .foregroundColor(.secondary)
 
-                    Text("Select a team to view players")
+                    Text("Select a team or position")
                         .font(.headline)
                         .foregroundColor(.secondary)
 
-                    Text("Choose from \(dataManager.teams.count) NFL teams")
+                    Text("Choose a team to view all players, or select a position to see the best players across all teams")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
@@ -280,7 +289,130 @@ struct TeamPlayersView: View {
     }
 }
 
+// MARK: - All Position Players View
+
+struct AllPositionPlayersView: View {
+    let position: String
+    @ObservedObject var fantasyManager: FantasyTeamManager
+    @StateObject private var dataManager = DataManager.shared
+    @State private var allPlayers: [(player: PlayerDTO, team: TeamDTO)] = []
+    @State private var isLoading = false
+
+    var sortedPlayers: [(player: PlayerDTO, team: TeamDTO)] {
+        allPlayers.sorted { (first, second) in
+            // Sort by best stats for the position
+            let stats1 = first.player.stats
+            let stats2 = second.player.stats
+
+            switch position {
+            case "QB":
+                let yards1 = stats1?.passingYards ?? 0
+                let yards2 = stats2?.passingYards ?? 0
+                return yards1 > yards2
+            case "RB":
+                let yards1 = stats1?.rushingYards ?? 0
+                let yards2 = stats2?.rushingYards ?? 0
+                return yards1 > yards2
+            case "WR", "TE":
+                let yards1 = stats1?.receivingYards ?? 0
+                let yards2 = stats2?.receivingYards ?? 0
+                return yards1 > yards2
+            default:
+                return false
+            }
+        }
+    }
+
+    var body: some View {
+        VStack {
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if sortedPlayers.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary)
+                    Text("No players found")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(sortedPlayers, id: \.player.id) { item in
+                            FantasyPlayerCard(
+                                player: item.player,
+                                team: item.team,
+                                fantasyManager: fantasyManager
+                            )
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
+        .task {
+            await loadAllPlayers()
+        }
+        .onChange(of: position) { _ in
+            Task {
+                await loadAllPlayers()
+            }
+        }
+    }
+
+    private func loadAllPlayers() async {
+        isLoading = true
+        allPlayers = []
+
+        let apiClient = APIClient()
+
+        // Load players from all teams
+        for team in dataManager.teams {
+            do {
+                let roster = try await apiClient.fetchRoster(teamAbbreviation: team.abbreviation)
+                let positionPlayers = roster.players.filter { $0.position == position }
+                let teamPlayers = positionPlayers.map { (player: $0, team: team) }
+                allPlayers.append(contentsOf: teamPlayers)
+            } catch {
+                // Continue with other teams if one fails
+                continue
+            }
+        }
+
+        isLoading = false
+    }
+}
+
 // MARK: - Supporting Views
+
+struct PositionFilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let isFull: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(isSelected ? .semibold : .regular)
+
+                if isFull {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(isFull ? Color.green.opacity(0.2) : (isSelected ? Color.accentColor : Color(.systemGray6)))
+            .foregroundColor(isFull ? .green : (isSelected ? .white : .primary))
+            .cornerRadius(20)
+        }
+    }
+}
 
 struct FilterChip: View {
     let title: String

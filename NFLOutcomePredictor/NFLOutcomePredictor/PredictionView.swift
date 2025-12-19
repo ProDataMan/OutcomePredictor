@@ -419,7 +419,7 @@ struct PredictionResultView: View {
                 Text("Model Information")
                     .font(.headline)
 
-                Text("Model: \(prediction.modelVersion)")
+                Text("Model: \(prediction.modelVersion ?? "Unknown")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -473,59 +473,6 @@ struct TeamPickerSheet: View {
                 }
             }
         }
-    }
-}
-
-struct UpcomingGameCard: View {
-    let game: GameDTO
-    let isSelected: Bool
-
-    var body: some View {
-        VStack(spacing: 8) {
-            // Date and time
-            VStack(spacing: 2) {
-                Text(game.date, style: .date)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Text(game.date, style: .time)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-
-            // Teams
-            HStack(spacing: 12) {
-                VStack(spacing: 4) {
-                    TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 30)
-                    Text(game.awayTeam.abbreviation)
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                }
-
-                Text("@")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-
-                VStack(spacing: 4) {
-                    TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 30)
-                    Text(game.homeTeam.abbreviation)
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                }
-            }
-
-            // Week indicator
-            Text("Week \(game.week ?? 0)")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-        .padding(12)
-        .frame(width: 140)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color(UIColor.systemGray6))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-        )
     }
 }
 

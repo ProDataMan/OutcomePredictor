@@ -59,7 +59,7 @@ struct TeamDetailView: View {
                             .padding()
                     } else {
                         ForEach(games, id: \.id) { game in
-                            NavigationLink(destination: GameDetailView(game: game)) {
+                            NavigationLink(destination: GameDetailView(game: game, sourceTeam: team)) {
                                 GameCardView(game: game, teamAbbreviation: team.abbreviation)
                             }
                             .buttonStyle(PlainButtonStyle())
@@ -440,56 +440,6 @@ struct GameCardView: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
-    }
-}
-
-struct NewsCardView: View {
-    let article: ArticleDTO
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(article.title)
-                .font(.headline)
-                .lineLimit(2)
-
-            if !article.content.isEmpty {
-                Text(article.content)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(3)
-            }
-
-            HStack {
-                Text(article.source)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text("•")
-                    .foregroundColor(.secondary)
-
-                Text(article.publishedDate, style: .date)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                if article.url != nil {
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundColor(.accentColor)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if let urlString = article.url, let url = URL(string: urlString) {
-                UIApplication.shared.open(url)
-            }
-        }
     }
 }
 

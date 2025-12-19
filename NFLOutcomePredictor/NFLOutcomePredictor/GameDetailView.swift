@@ -2,8 +2,20 @@ import SwiftUI
 
 struct GameDetailView: View {
     let game: GameDTO
+    let sourceTeam: TeamDTO? // Team we navigated from
+    @StateObject private var dataManager = DataManager.shared
     @State private var weather: GameWeatherDTO?
     @State private var isLoadingWeather = false
+    @State private var prediction: PredictionResult?
+    @State private var isLoadingPrediction = false
+    @State private var upcomingGames: [GameDTO] = []
+    @State private var news: [ArticleDTO] = []
+    @State private var isLoadingNews = false
+
+    init(game: GameDTO, sourceTeam: TeamDTO? = nil) {
+        self.game = game
+        self.sourceTeam = sourceTeam
+    }
 
     private var isCompleted: Bool {
         game.homeScore != nil && game.awayScore != nil
@@ -18,6 +30,15 @@ struct GameDetailView: View {
         return nil // Tie
     }
 
+    // Filter upcoming games to only this team's games
+    private var filteredUpcomingGames: [GameDTO] {
+        guard let sourceTeam = sourceTeam else { return [] }
+        return upcomingGames.filter { game in
+            game.homeTeam.abbreviation == sourceTeam.abbreviation ||
+            game.awayTeam.abbreviation == sourceTeam.abbreviation
+        }.prefix(5).map { $0 }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -26,6 +47,11 @@ struct GameDetailView: View {
 
                 // Team matchup
                 teamMatchupCard
+
+                // Prediction (for upcoming games)
+                if !isCompleted {
+                    predictionCard
+                }
 
                 // Weather forecast (for upcoming games)
                 if !isCompleted {
@@ -37,6 +63,16 @@ struct GameDetailView: View {
                     gameStatsCard
                 }
 
+                // Other upcoming games for this team
+                if !filteredUpcomingGames.isEmpty && sourceTeam != nil {
+                    otherUpcomingGamesCard
+                }
+
+                // Latest news
+                if !news.isEmpty {
+                    newsCard
+                }
+
                 // Series history
                 seriesHistoryCard
             }
@@ -46,6 +82,9 @@ struct GameDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadWeather()
+            await loadPrediction()
+            await loadUpcomingGames()
+            await loadNews()
         }
     }
 
@@ -290,6 +329,141 @@ struct GameDetailView: View {
         .cornerRadius(12)
     }
 
+    // MARK: - Prediction
+
+    private var predictionCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("AI Prediction")
+                .font(.headline)
+
+            if isLoadingPrediction {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            } else if let prediction = prediction {
+                VStack(spacing: 16) {
+                    // Winner display
+                    VStack(spacing: 8) {
+                        TeamIconView(teamAbbreviation: prediction.predictedWinner, size: 60)
+
+                        Text("\(Int(prediction.confidence * 100))% Win Probability")
+                            .font(.headline)
+                            .foregroundColor(.green)
+
+                        Text("Predicted Winner: \(prediction.predictedWinner)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(12)
+
+                    // AI Analysis
+                    if let reasoning = prediction.reasoning {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Analysis")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+
+                            Text(reasoning)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    // Confidence bar
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("Confidence")
+                                .font(.caption)
+                            Spacer()
+                            Text("\(Int(prediction.confidence * 100))%")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.gray.opacity(0.2))
+                                    .frame(height: 8)
+
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.accentColor)
+                                    .frame(width: geometry.size.width * prediction.confidence, height: 8)
+                            }
+                        }
+                        .frame(height: 8)
+                    }
+                }
+            } else {
+                Text("Prediction unavailable")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
+    // MARK: - Other Upcoming Games
+
+    private var otherUpcomingGamesCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let team = sourceTeam {
+                Text("Other \(team.abbreviation) Games")
+                    .font(.headline)
+            } else {
+                Text("Other Upcoming Games")
+                    .font(.headline)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(filteredUpcomingGames, id: \.id) { upcomingGame in
+                        if upcomingGame.id != game.id {
+                            NavigationLink(destination: GameDetailView(game: upcomingGame, sourceTeam: sourceTeam)) {
+                                UpcomingGameCard(game: upcomingGame, isSelected: false)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
+    // MARK: - News
+
+    private var newsCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Latest News")
+                .font(.headline)
+
+            if isLoadingNews {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(news.prefix(3)) { article in
+                        NewsCardView(article: article)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
     // MARK: - Helpers
 
     private var locationName: String {
@@ -354,6 +528,158 @@ struct GameDetailView: View {
         )
 
         isLoadingWeather = false
+    }
+
+    private func loadPrediction() async {
+        guard !isCompleted else { return } // Don't predict completed games
+
+        isLoadingPrediction = true
+
+        do {
+            let result = try await dataManager.makePrediction(
+                home: game.homeTeam.abbreviation,
+                away: game.awayTeam.abbreviation,
+                season: game.season ?? Calendar.current.component(.year, from: Date())
+            )
+            prediction = result
+        } catch {
+            // Silently fail - prediction is not critical
+            prediction = nil
+        }
+
+        isLoadingPrediction = false
+    }
+
+    private func loadUpcomingGames() async {
+        guard sourceTeam != nil else { return }
+
+        upcomingGames = dataManager.upcomingGames
+        // If empty, try to load
+        if upcomingGames.isEmpty {
+            await dataManager.loadUpcomingGames()
+            upcomingGames = dataManager.upcomingGames
+        }
+    }
+
+    private func loadNews() async {
+        guard let sourceTeam = sourceTeam else { return }
+
+        isLoadingNews = true
+
+        do {
+            let apiClient = APIClient()
+            news = try await apiClient.fetchNews(teamAbbreviation: sourceTeam.abbreviation, limit: 3)
+        } catch {
+            // Silently fail - news is not critical
+            news = []
+        }
+
+        isLoadingNews = false
+    }
+}
+
+// Import UpcomingGameCard from PredictionView
+struct UpcomingGameCard: View {
+    let game: GameDTO
+    let isSelected: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // Date and time
+            VStack(spacing: 2) {
+                Text(game.date, style: .date)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Text(game.date, style: .time)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            // Teams
+            HStack(spacing: 12) {
+                VStack(spacing: 4) {
+                    TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 30)
+                    Text(game.awayTeam.abbreviation)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                }
+
+                Text("@")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+
+                VStack(spacing: 4) {
+                    TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 30)
+                    Text(game.homeTeam.abbreviation)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                }
+            }
+
+            // Week indicator
+            Text("Week \(game.week ?? 0)")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(12)
+        .frame(width: 140)
+        .background(isSelected ? Color.accentColor.opacity(0.2) : Color(UIColor.systemGray6))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+        )
+    }
+}
+
+// NewsCardView for displaying news articles
+struct NewsCardView: View {
+    let article: ArticleDTO
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(article.title)
+                .font(.headline)
+                .lineLimit(2)
+
+            if !article.content.isEmpty {
+                Text(article.content)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+            }
+
+            HStack {
+                Text(article.source)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text("•")
+                    .foregroundColor(.secondary)
+
+                Text(article.publishedDate, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                if article.url != nil {
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let urlString = article.url, let url = URL(string: urlString) {
+                UIApplication.shared.open(url)
+            }
+        }
     }
 }
 
