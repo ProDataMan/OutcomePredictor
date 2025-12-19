@@ -487,3 +487,31 @@ public struct TeamRosterDTO: Codable, Sendable {
         self.season = season
     }
 }
+
+// MARK: - Weather DTO
+
+/// Weather forecast for a game.
+public struct GameWeatherDTO: Codable, Sendable {
+    public let temperature: Double
+    public let condition: String
+    public let windSpeed: Double
+    public let precipitation: Double
+    public let humidity: Double
+    public let timestamp: Date
+
+    public init(
+        temperature: Double,
+        condition: String,
+        windSpeed: Double,
+        precipitation: Double,
+        humidity: Double,
+        timestamp: Date = Date()
+    ) {
+        self.temperature = temperature
+        self.condition = condition
+        self.windSpeed = windSpeed
+        self.precipitation = precipitation
+        self.humidity = humidity
+        self.timestamp = timestamp
+    }
+}

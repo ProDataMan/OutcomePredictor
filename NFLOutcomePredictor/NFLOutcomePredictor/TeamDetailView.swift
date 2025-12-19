@@ -59,7 +59,10 @@ struct TeamDetailView: View {
                             .padding()
                     } else {
                         ForEach(games, id: \.id) { game in
-                            GameCardView(game: game, teamAbbreviation: team.abbreviation)
+                            NavigationLink(destination: GameDetailView(game: game)) {
+                                GameCardView(game: game, teamAbbreviation: team.abbreviation)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                         .padding(.horizontal)
                     }
@@ -128,18 +131,20 @@ struct TeamDetailView: View {
             let apiClient = APIClient()
             let allGames = try await apiClient.fetchTeamGames(teamAbbreviation: team.abbreviation, season: selectedSeason)
 
-            // Filter for upcoming games (games that haven't been played yet or are in progress)
-            // A game is upcoming if it has no final score or the scheduled date is in the future
-            let now = Date()
-            games = allGames.filter { game in
-                // Game is upcoming if it has no scores (not played yet) or scheduled date is in the future
-                if game.homeScore == nil && game.awayScore == nil {
-                    return true
+            // Show all games sorted by date (newest first for current season, all games for past seasons)
+            let currentYear = Calendar.current.component(.year, from: Date())
+
+            if selectedSeason >= currentYear {
+                // For current/future seasons, show only remaining games
+                let now = Date()
+                games = allGames.filter { game in
+                    game.homeScore == nil && game.awayScore == nil || game.date > now
                 }
-                // Also include games scheduled in the future even if they have placeholder scores
-                return game.date > now
+                .sorted { $0.date < $1.date }
+            } else {
+                // For past seasons, show all games sorted by week
+                games = allGames.sorted { ($0.week ?? 0) < ($1.week ?? 0) }
             }
-            .sorted { $0.date < $1.date } // Sort by date, earliest first
         } catch {
             // Silently fail - games are not critical
             games = []
