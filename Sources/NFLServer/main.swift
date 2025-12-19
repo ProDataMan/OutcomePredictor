@@ -95,6 +95,19 @@ func routes(_ app: Application) throws {
         return "OK"
     }
 
+    // Static website routes
+    app.get { req async throws -> Response in
+        try await req.fileio.asyncStreamFile(at: "\(app.directory.publicDirectory)index.html")
+    }
+
+    app.get("privacy") { req async throws -> Response in
+        try await req.fileio.asyncStreamFile(at: "\(app.directory.publicDirectory)privacy.html")
+    }
+
+    app.get("support") { req async throws -> Response in
+        try await req.fileio.asyncStreamFile(at: "\(app.directory.publicDirectory)support.html")
+    }
+
     // API v1 routes
     let api = app.grouped("api", "v1")
 
