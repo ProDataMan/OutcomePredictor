@@ -383,16 +383,21 @@ struct AllPositionPlayersView: View {
         // Load players from all teams
         for team in dataManager.teams {
             do {
+                print("📥 Fetching roster for \(team.abbreviation)...")
                 let roster = try await apiClient.fetchRoster(teamAbbreviation: team.abbreviation)
                 let positionPlayers = roster.players.filter { $0.position == position }
                 let teamPlayers = positionPlayers.map { (player: $0, team: team) }
                 allPlayers.append(contentsOf: teamPlayers)
+                print("✅ Successfully loaded \(positionPlayers.count) \(position) players from \(team.abbreviation)")
             } catch {
-                // Continue with other teams if one fails
+                // Log the error but continue with other teams
+                print("⚠️ Failed to load roster for \(team.abbreviation): \(error.localizedDescription)")
+                print("Continuing with other teams...")
                 continue
             }
         }
 
+        print("📊 Total \(position) players loaded: \(allPlayers.count)")
         isLoading = false
     }
 }

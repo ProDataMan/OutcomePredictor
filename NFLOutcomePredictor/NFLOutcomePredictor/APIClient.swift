@@ -219,7 +219,55 @@ final class APIClient: ObservableObject {
             let currentSeason = season ?? Calendar.current.component(.year, from: Date())
             let url = URL(string: "\(baseURL)/teams/\(teamAbbreviation)/roster?season=\(currentSeason)")!
             let (data, _) = try await urlSession.data(from: url)
-            return try decoder.decode(TeamRosterDTO.self, from: data)
+
+            // Debug logging for WAS team
+            if teamAbbreviation == "WAS" {
+                print("=== WAS Team Roster Response ===")
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Raw JSON: \(jsonString)")
+                }
+                print("================================")
+            }
+
+            var roster = try decoder.decode(TeamRosterDTO.self, from: data)
+
+            // Fix WAS team issue - if team field was missing, replace with correct team
+            if roster.team.abbreviation == "UNK" {
+                print("⚠️ Team field missing for \(teamAbbreviation), fetching team info separately")
+                // Fetch the team info separately
+                let teams = try await fetchTeams()
+                if let correctTeam = teams.first(where: { $0.abbreviation == teamAbbreviation }) {
+                    print("✅ Successfully replaced placeholder team with: \(correctTeam.name)")
+                    roster = TeamRosterDTO(team: correctTeam, players: roster.players, season: roster.season)
+                } else {
+                    print("❌ Could not find team info for \(teamAbbreviation)")
+                }
+            }
+
+            return roster
+        } catch let decodingError as DecodingError {
+            // Enhanced logging for decoding errors
+            print("=== Decoding Error for \(teamAbbreviation) ===")
+            switch decodingError {
+            case .keyNotFound(let key, let context):
+                print("Missing key: \(key.stringValue)")
+                print("Context: \(context.debugDescription)")
+                print("Coding path: \(context.codingPath)")
+            case .typeMismatch(let type, let context):
+                print("Type mismatch: expected \(type)")
+                print("Context: \(context.debugDescription)")
+            case .valueNotFound(let type, let context):
+                print("Value not found: \(type)")
+                print("Context: \(context.debugDescription)")
+            case .dataCorrupted(let context):
+                print("Data corrupted: \(context.debugDescription)")
+            @unknown default:
+                print("Unknown decoding error")
+            }
+            print("=============================================")
+
+            ErrorHandler.shared.handle(decodingError, context: "Failed to decode roster for team \(teamAbbreviation)")
+            throw decodingError
         } catch {
             if let urlErr = error as? URLError, urlErr.code == .cancelled {
                 throw error

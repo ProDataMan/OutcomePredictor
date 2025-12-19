@@ -487,10 +487,30 @@ public struct TeamRosterDTO: Codable, Sendable {
     public let players: [PlayerDTO]
     public let season: Int
 
+    enum CodingKeys: String, CodingKey {
+        case team, players, season
+    }
+
     public init(team: TeamDTO, players: [PlayerDTO], season: Int) {
         self.team = team
         self.players = players
         self.season = season
+    }
+
+    // Custom decoder to handle missing team field (WAS team issue)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Try to decode team, if missing create a placeholder
+        if let decodedTeam = try? container.decode(TeamDTO.self, forKey: .team) {
+            self.team = decodedTeam
+        } else {
+            // Create a placeholder team - will be replaced by caller
+            self.team = TeamDTO(name: "Unknown", abbreviation: "UNK", conference: "", division: "")
+        }
+
+        self.players = try container.decode([PlayerDTO].self, forKey: .players)
+        self.season = try container.decode(Int.self, forKey: .season)
     }
 }
 
