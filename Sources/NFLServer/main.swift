@@ -17,6 +17,9 @@ do {
 }
 
 func configure(_ app: Application) async throws {
+    // Enable static file serving from Public directory
+    app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+
     // Configure JSON encoder/decoder
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
