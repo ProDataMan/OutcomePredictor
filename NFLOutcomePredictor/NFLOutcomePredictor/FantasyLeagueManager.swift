@@ -60,6 +60,28 @@ final class FantasyLeagueManager: ObservableObject {
         saveLeagues()
     }
 
+    /// Update league name.
+    func updateLeagueName(_ leagueId: String, name: String) {
+        guard let index = leagues.firstIndex(where: { $0.id == leagueId }) else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+
+        leagues[index].name = trimmed
+
+        // Update current league if it's the one being edited
+        if currentLeague?.id == leagueId {
+            currentLeague = leagues[index]
+        }
+
+        saveLeagues()
+    }
+
+    /// Set current league.
+    func setCurrentLeague(_ league: FantasyLeague) {
+        currentLeague = league
+        saveCurrentLeague()
+    }
+
     /// Update league standings based on weekly scores.
     func updateStandings(for league: FantasyLeague) {
         // Calculate standings based on fantasy points

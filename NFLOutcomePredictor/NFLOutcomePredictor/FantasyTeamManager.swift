@@ -9,8 +9,10 @@ final class FantasyTeamManager: ObservableObject {
 
     @Published var roster: FantasyRoster
     @Published var rosterChanges: Int = 0 // Trigger view updates
+    @Published var teamName: String
 
     private let userDefaultsKey = "fantasy_roster"
+    private let teamNameKey = "fantasy_team_name"
 
     private init() {
         // Load saved roster from UserDefaults
@@ -20,6 +22,18 @@ final class FantasyTeamManager: ObservableObject {
         } else {
             self.roster = FantasyRoster()
         }
+
+        // Load team name
+        self.teamName = UserDefaults.standard.string(forKey: teamNameKey) ?? "My Team"
+    }
+
+    /// Update team name.
+    func updateTeamName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+
+        teamName = trimmed
+        UserDefaults.standard.set(trimmed, forKey: teamNameKey)
     }
 
     /// Add a player to the roster.

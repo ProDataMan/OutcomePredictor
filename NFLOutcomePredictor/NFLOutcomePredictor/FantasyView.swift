@@ -8,6 +8,7 @@ struct FantasyView: View {
     @State private var selectedTeam: TeamDTO?
     @State private var selectedPosition: String = "All"
     @State private var searchText = ""
+    @State private var showingSettings = false
 
     private let positions = ["All", "QB", "RB", "WR", "TE", "K", "DEF"]
 
@@ -34,6 +35,14 @@ struct FantasyView: View {
             .navigationTitle("Fantasy Football")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showingSettings = true
+                    }) {
+                        Image(systemName: "gearshape.fill")
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if selectedTab == 1 && !fantasyManager.roster.allPlayers.isEmpty {
                         Button(action: {
@@ -44,6 +53,9 @@ struct FantasyView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showingSettings) {
+                FantasySettingsView()
             }
         }
     }
