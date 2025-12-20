@@ -1,21 +1,57 @@
 import SwiftUI
+import AVKit
 
-/// Custom shark view with nose ring using SF Symbols and shapes
+/// Custom shark view with Bull Shark video
 struct SharkWithNoseRing: View {
     let size: CGFloat
+    @State private var player: AVPlayer?
 
     var body: some View {
         ZStack {
-            // Shark emoji as base (largest available shark representation)
-            Text("🦈")
-                .font(.system(size: size))
-
-            // Nose ring overlay (positioned on the shark's "nose")
-            Circle()
-                .stroke(Color.yellow, lineWidth: size * 0.04)
-                .frame(width: size * 0.15, height: size * 0.15)
-                .offset(x: size * 0.15, y: size * 0.1)
+            if let player = player {
+                // Video player for Bull Shark animation
+                VideoPlayer(player: player)
+                    .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .onAppear {
+                        player.play()
+                    }
+                    .onDisappear {
+                        player.pause()
+                    }
+            } else {
+                // Fallback to static image if video fails to load
+                Image("BullShark")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: size, height: size)
+            }
         }
+        .onAppear {
+            setupPlayer()
+        }
+    }
+
+    private func setupPlayer() {
+        guard let videoURL = Bundle.main.url(forResource: "BullShark", withExtension: "mp4") else {
+            print("⚠️ BullShark.mp4 not found in bundle")
+            return
+        }
+
+        let playerItem = AVPlayerItem(url: videoURL)
+        let newPlayer = AVPlayer(playerItem: playerItem)
+
+        // Loop the video
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { _ in
+            newPlayer.seek(to: .zero)
+            newPlayer.play()
+        }
+
+        player = newPlayer
     }
 }
 

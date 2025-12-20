@@ -412,6 +412,11 @@ func routes(_ app: Application) throws {
         }
         throw Abort(.notFound, reason: "API-Sports data source not configured")
     }
+
+    // Catch-all route for 404 errors (must be last)
+    app.get("**") { req async throws -> Response in
+        try await req.fileio.asyncStreamFile(at: "\(req.application.directory.publicDirectory)404.html")
+    }
 }
 
 // MARK: - Response Models
