@@ -29,20 +29,12 @@ struct FantasyPlayerCard: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        Circle()
-                            .fill(Color.gray.opacity(0.3))
+                        PlayerPositionIcon(position: player.position, size: 60)
                     }
                     .frame(width: 60, height: 60)
                     .clipShape(Circle())
                 } else {
-                    Circle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 60, height: 60)
-                        .overlay(
-                            Text(player.position)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                        )
+                    PlayerPositionIcon(position: player.position, size: 60)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -130,20 +122,12 @@ struct FantasyRosterPlayerCard: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Circle()
-                        .fill(Color.gray.opacity(0.3))
+                    PlayerPositionIcon(position: player.position, size: 50)
                 }
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())
             } else {
-                Circle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Text(player.position)
-                            .font(.caption)
-                            .foregroundColor(.white)
-                    )
+                PlayerPositionIcon(position: player.position, size: 50)
             }
 
             VStack(alignment: .leading, spacing: 4) {

@@ -5,6 +5,7 @@ import AVKit
 struct SharkWithNoseRing: View {
     let size: CGFloat
     @State private var player: AVPlayer?
+    @State private var loopObserver: NSObjectProtocol?
 
     var body: some View {
         ZStack {
@@ -18,6 +19,7 @@ struct SharkWithNoseRing: View {
                     }
                     .onDisappear {
                         player.pause()
+                        cleanupPlayer()
                     }
             } else {
                 // Fallback to static image if video fails to load
@@ -42,7 +44,7 @@ struct SharkWithNoseRing: View {
         let newPlayer = AVPlayer(playerItem: playerItem)
 
         // Loop the video
-        NotificationCenter.default.addObserver(
+        loopObserver = NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: playerItem,
             queue: .main
@@ -52,6 +54,14 @@ struct SharkWithNoseRing: View {
         }
 
         player = newPlayer
+    }
+
+    private func cleanupPlayer() {
+        if let observer = loopObserver {
+            NotificationCenter.default.removeObserver(observer)
+            loopObserver = nil
+        }
+        player = nil
     }
 }
 

@@ -29,8 +29,7 @@ struct PlayerDetailView: View {
                                 .aspectRatio(contentMode: .fill)
                         } placeholder: {
                             ZStack {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.3))
+                                PlayerPositionIcon(position: player.position, size: 150)
                                 ProgressView()
                             }
                         }
@@ -42,19 +41,7 @@ struct PlayerDetailView: View {
                         )
                         .shadow(radius: 10)
                     } else {
-                        Circle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(width: 150, height: 150)
-                            .overlay(
-                                VStack {
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 60))
-                                        .foregroundColor(.white)
-                                    Text(player.position)
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                }
-                            )
+                        PlayerPositionIcon(position: player.position, size: 150)
                             .overlay(
                                 Circle()
                                     .stroke(Color.accentColor, lineWidth: 4)
