@@ -93,8 +93,8 @@
 		99D5EDB72ED80256002A9406 = {
 			isa = PBXGroup;
 			children = (
-				99ADB5FD2EF72C6200390573 /* BullShark.mp4 */,
 				99D5EDC22ED80256002A9406 /* NFLOutcomePredictor */,
+				99ADB5FD2EF72C6200390573 /* BullShark.mp4 */,
 				99D5EDD02ED80257002A9406 /* NFLOutcomePredictorTests */,
 				99D5EDDA2ED80257002A9406 /* NFLOutcomePredictorUITests */,
 				99D5EDC12ED80256002A9406 /* Products */,
