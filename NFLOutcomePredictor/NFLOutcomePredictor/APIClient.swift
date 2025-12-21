@@ -22,10 +22,10 @@ final class APIClient: ObservableObject {
             self.baseURL = baseURL ?? "https://statshark-api.azurewebsites.net/api/v1"
         }
 
-        // Configure URLSession with proper timeouts
+        // Configure URLSession with extended timeouts for Azure cold starts
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30.0  // 30 seconds for request
-        config.timeoutIntervalForResource = 60.0 // 60 seconds for resource
+        config.timeoutIntervalForRequest = 90.0  // 90 seconds for request (Azure cold start can take 60s)
+        config.timeoutIntervalForResource = 120.0 // 120 seconds for resource
         config.waitsForConnectivity = true
         self.urlSession = URLSession(configuration: config)
     }
