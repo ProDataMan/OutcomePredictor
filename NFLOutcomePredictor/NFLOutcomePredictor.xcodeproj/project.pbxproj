@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		99ADB5FE2EF72C6200390573 /* BullShark.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 99ADB5FD2EF72C6200390573 /* BullShark.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,7 +27,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		99ADB5FD2EF72C6200390573 /* BullShark.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = BullShark.mp4; sourceTree = "<group>"; };
 		99D5EDC02ED80256002A9406 /* NFLOutcomePredictor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NFLOutcomePredictor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		99D5EDCD2ED80257002A9406 /* NFLOutcomePredictorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NFLOutcomePredictorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		99D5EDD72ED80257002A9406 /* NFLOutcomePredictorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NFLOutcomePredictorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,7 +92,6 @@
 			isa = PBXGroup;
 			children = (
 				99D5EDC22ED80256002A9406 /* NFLOutcomePredictor */,
-				99ADB5FD2EF72C6200390573 /* BullShark.mp4 */,
 				99D5EDD02ED80257002A9406 /* NFLOutcomePredictorTests */,
 				99D5EDDA2ED80257002A9406 /* NFLOutcomePredictorUITests */,
 				99D5EDC12ED80256002A9406 /* Products */,
@@ -231,7 +228,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				99ADB5FE2EF72C6200390573 /* BullShark.mp4 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
