@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StatShark</string>
+
+    <!-- Tab Titles -->
+    <string name="tab_teams">Teams</string>
+    <string name="tab_predictions">Predict</string>
+    <string name="tab_fantasy">Fantasy</string>
+
+    <!-- Teams Screen -->
+    <string name="teams_title">NFL Teams</string>
+    <string name="filter_all">All</string>
+    <string name="filter_nfc">NFC</string>
+    <string name="filter_afc">AFC</string>
+
+    <!-- Predictions Screen -->
+    <string name="predictions_title">Predictions</string>
+    <string name="select_teams">Select Teams to Predict</string>
+    <string name="upcoming_games">Upcoming Games</string>
+
+    <!-- Fantasy Screen -->
+    <string name="fantasy_title">Fantasy</string>
+    <string name="my_team">My Team</string>
+    <string name="find_players">Find Players</string>
+    <string name="leagues">Leagues</string>
+
+    <!-- Common -->
+    <string name="loading">Loading...</string>
+    <string name="error">Error</string>
+    <string name="retry">Retry</string>
+    <string name="close">Close</string>
+</resources>
