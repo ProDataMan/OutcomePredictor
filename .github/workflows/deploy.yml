@@ -117,6 +117,10 @@ jobs:
               "value": "${{ secrets.ODDS_API_KEY }}"
             },
             {
+              "name": "API_SPORTS_KEY",
+              "value": "${{ secrets.API_SPORTS_KEY }}"
+            },
+            {
               "name": "ESPN_BASE_URL",
               "value": "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
             },
