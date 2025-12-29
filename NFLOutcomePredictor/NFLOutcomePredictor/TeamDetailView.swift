@@ -173,8 +173,23 @@ struct TeamDetailView: View {
         do {
             let apiClient = APIClient()
             roster = try await apiClient.fetchRoster(teamAbbreviation: team.abbreviation, season: selectedSeason)
+
+            // Debug logging to verify data
+            if let roster = roster {
+                print("✅ Loaded roster for \(team.abbreviation): \(roster.players.count) players")
+                let playersWithPhotos = roster.players.filter { $0.photoURL != nil && !$0.photoURL!.isEmpty }
+                print("📸 Players with photoURL: \(playersWithPhotos.count) / \(roster.players.count)")
+
+                // Show first 3 players as sample
+                for (index, player) in roster.players.prefix(3).enumerated() {
+                    print("  \(index + 1). \(player.name)")
+                    print("     photoURL: \(player.photoURL ?? "nil")")
+                    print("     stats: \(player.stats != nil ? "present" : "nil")")
+                }
+            }
         } catch {
             // Silently fail - roster is not critical
+            print("❌ Failed to load roster: \(error.localizedDescription)")
             roster = nil
         }
 
@@ -223,17 +238,35 @@ struct PlayerStatCard: View {
         HStack(spacing: 12) {
             // Player photo or icon
             if let photoURL = player.photoURL, let url = URL(string: photoURL) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    PlayerPositionIcon(position: player.position, size: 50)
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 50, height: 50)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    case .failure(let error):
+                        PlayerPositionIcon(position: player.position, size: 50)
+                            .onAppear {
+                                print("❌ Failed to load image for \(player.name): \(error.localizedDescription)")
+                                print("   URL: \(photoURL)")
+                            }
+                    @unknown default:
+                        PlayerPositionIcon(position: player.position, size: 50)
+                    }
                 }
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())
+                .onAppear {
+                    print("🔍 Loading image for \(player.name): \(photoURL)")
+                }
             } else {
                 PlayerPositionIcon(position: player.position, size: 50)
+                    .onAppear {
+                        print("⚠️ No photoURL for \(player.name)")
+                    }
             }
 
             VStack(alignment: .leading, spacing: 4) {
