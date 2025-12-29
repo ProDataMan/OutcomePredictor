@@ -13,8 +13,8 @@ sealed class Screen(val route: String) {
     object GameDetail : Screen("game/{gameId}") {
         fun createRoute(gameId: String) = "game/$gameId"
     }
-    object PlayerDetail : Screen("player/{playerId}") {
-        fun createRoute(playerId: String) = "player/$playerId"
+    object PlayerDetail : Screen("player/{playerId}/{teamId}") {
+        fun createRoute(playerId: String, teamId: String) = "player/$playerId/$teamId"
     }
 }
 

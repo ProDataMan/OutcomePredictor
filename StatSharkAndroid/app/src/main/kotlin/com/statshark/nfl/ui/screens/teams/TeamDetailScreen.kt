@@ -26,10 +26,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.statshark.nfl.data.cache.PlayerCache
 import com.statshark.nfl.data.model.ArticleDTO
 import com.statshark.nfl.data.model.GameDTO
 import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.data.model.PlayerStatsDTO
+import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
 import java.text.SimpleDateFormat
 import java.util.*
@@ -121,7 +123,11 @@ fun TeamDetailScreen(
                         error = uiState.rosterError,
                         onRetry = { viewModel.retry() },
                         onPlayerClick = { playerId ->
-                            // TODO: Navigate to player detail
+                            // Store player in cache and navigate
+                            uiState.players.find { it.id == playerId }?.let { player ->
+                                PlayerCache.put(player)
+                                navController.navigate(Screen.PlayerDetail.createRoute(playerId, team.abbreviation))
+                            }
                         }
                     )
                     1 -> GamesTab(

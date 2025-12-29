@@ -13,9 +13,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.statshark.nfl.data.cache.PlayerCache
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.navigation.bottomNavItems
 import com.statshark.nfl.ui.screens.fantasy.FantasyScreen
+import com.statshark.nfl.ui.screens.player.PlayerDetailScreen
 import com.statshark.nfl.ui.screens.predictions.PredictionsScreen
 import com.statshark.nfl.ui.screens.teams.TeamDetailScreen
 import com.statshark.nfl.ui.screens.teams.TeamsScreen
@@ -94,9 +96,32 @@ fun StatSharkApp() {
                 )
             }
 
+            composable(
+                route = Screen.PlayerDetail.route,
+                arguments = listOf(
+                    navArgument("playerId") { type = NavType.StringType },
+                    navArgument("teamId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val playerId = backStackEntry.arguments?.getString("playerId") ?: return@composable
+                val teamId = backStackEntry.arguments?.getString("teamId") ?: return@composable
+
+                // Retrieve player from cache
+                val player = PlayerCache.get(playerId)
+                if (player != null) {
+                    PlayerDetailScreen(
+                        player = player,
+                        teamAbbreviation = teamId,
+                        navController = navController
+                    )
+                } else {
+                    // Player not in cache, navigate back
+                    navController.navigateUp()
+                }
+            }
+
             // TODO: Add other detail screens
             // composable(Screen.GameDetail.route) { ... }
-            // composable(Screen.PlayerDetail.route) { ... }
         }
     }
 }
