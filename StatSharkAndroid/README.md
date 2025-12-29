@@ -14,25 +14,38 @@ Android version of the StatShark NFL prediction and fantasy football app.
 
 ## 📱 Features
 
-### Implemented
-- ✅ Project structure
-- ✅ API client with Retrofit
-- ✅ Data models (DTOs)
-- ✅ Navigation setup
-- ✅ Bottom navigation bar
-- ✅ Material 3 theming
+### Implemented ✅
+- ✅ Project structure with Jetpack Compose
+- ✅ API client with Retrofit and Hilt DI
+- ✅ Complete data models (DTOs) matching backend API
+- ✅ Navigation with bottom bar and deep linking
+- ✅ Material 3 theming with team colors
+- ✅ **Teams Screen** - Grid view of all 32 NFL teams with conference filtering
+- ✅ **Team Detail Screen** - 3-tab interface with:
+  - Player roster with photos, stats, and position grouping
+  - Game history with scores and win/loss tracking
+  - Team news feed with articles
+  - Season selector (2020-present)
+- ✅ **Predictions Screen** - AI-powered game predictions with:
+  - Upcoming games display
+  - On-demand prediction generation
+  - Win probabilities and confidence scores
+  - Detailed analysis and reasoning
+  - Vegas odds comparison
+- ✅ Team color system for all 32 NFL teams
+- ✅ Error handling with retry functionality
+- ✅ Loading states and empty states
+- ✅ Network timeout configuration for Azure cold starts
 
-### In Progress
-- 🚧 Teams screen with grid layout
-- 🚧 API integration
-- 🚧 Team detail view
+### In Progress 🚧
+- 🚧 Player detail screen
+- 🚧 Game detail screen
 
-### Planned
-- ⏳ Predictions screen
-- ⏳ Fantasy screen
-- ⏳ Player details
-- ⏳ Game details
-- ⏳ News integration
+### Planned ⏳
+- ⏳ Fantasy screen with roster management
+- ⏳ Push notifications for game updates
+- ⏳ Offline caching with Room database
+- ⏳ Widget for upcoming predictions
 
 ## 🚀 Getting Started
 
@@ -87,33 +100,54 @@ The app connects to the StatShark API:
 
 ## 🔧 Development Status
 
-**Current Phase:** Phase 1 - Foundation ✅
+**Current Phase:** Phase 3 - Core Features Complete ✅
+
+**Completed:**
+1. ✅ Phase 1: Foundation (API, Navigation, Architecture)
+2. ✅ Phase 2: Teams Screen with API Integration
+3. ✅ Phase 3: Team Detail and Predictions Screens
 
 **Next Steps:**
-1. Implement Teams list with API
-2. Add team branding system
-3. Build team detail screen
-4. Create player roster view
+1. Player detail screen with comprehensive stats visualization
+2. Game detail screen with play-by-play and box score
+3. Fantasy screen for roster management
+4. Build and test on Android device/emulator
+5. Performance optimization and polish
 
 ## 📂 Project Structure
 
 ```
 app/src/main/kotlin/com/statshark/nfl/
 ├── api/                    # API client and services
-│   ├── ApiClient.kt
-│   └── StatSharkApiService.kt
+│   ├── ApiClient.kt        # Retrofit configuration with timeouts
+│   └── StatSharkApiService.kt  # API endpoints
 ├── data/                   # Data layer
-│   └── model/
-│       └── DTOs.kt
+│   ├── model/
+│   │   └── DTOs.kt         # Data transfer objects
+│   └── repository/
+│       └── NFLRepository.kt  # Repository with caching
+├── di/                     # Dependency injection
+│   └── AppModule.kt        # Hilt modules
 ├── ui/                     # UI layer
 │   ├── navigation/
+│   │   └── Navigation.kt   # Routes and navigation
 │   ├── screens/
 │   │   ├── teams/
+│   │   │   ├── TeamsScreen.kt       # Teams grid
+│   │   │   ├── TeamsViewModel.kt    # Teams state
+│   │   │   ├── TeamDetailScreen.kt  # Team detail UI
+│   │   │   └── TeamDetailViewModel.kt  # Team detail state
 │   │   ├── predictions/
+│   │   │   ├── PredictionsScreen.kt    # Predictions UI
+│   │   │   └── PredictionsViewModel.kt # Predictions state
 │   │   └── fantasy/
-│   └── theme/
-├── MainActivity.kt
-└── StatSharkApplication.kt
+│   │       └── FantasyScreen.kt     # Fantasy placeholder
+│   ├── theme/
+│   │   ├── Theme.kt         # Material 3 theme
+│   │   └── TeamColors.kt    # NFL team colors
+│   └── StatSharkApp.kt      # Main app composable
+├── MainActivity.kt          # App entry point
+└── StatSharkApplication.kt  # Application class with Hilt
 ```
 
 ## 🧪 Testing
@@ -129,11 +163,46 @@ app/src/main/kotlin/com/statshark/nfl/
 
 ## 👨‍💻 Development Timeline
 
-- **Week 1:** Foundation (API, DTOs, Navigation) ✅
-- **Week 2:** Teams Feature (In Progress)
-- **Week 3:** Predictions Feature
-- **Weeks 4-5:** Fantasy Feature
-- **Week 6:** Polish & Launch
+- **Phase 1:** Foundation (API, DTOs, Navigation, DI) ✅
+- **Phase 2:** Teams Feature with API Integration ✅
+- **Phase 3:** Team Detail and Predictions Features ✅
+- **Phase 4:** Player and Game Details (In Progress)
+- **Phase 5:** Fantasy Feature (Planned)
+- **Phase 6:** Polish, Testing & Launch (Planned)
+
+## 🎯 Current Implementation Status
+
+The Android app now has feature parity with the iOS app for core functionality:
+
+| Feature | iOS | Android | Notes |
+|---------|-----|---------|-------|
+| Teams List | ✅ | ✅ | Grid view with filtering |
+| Team Detail | ✅ | ✅ | Roster, games, news tabs |
+| Predictions | ✅ | ✅ | AI predictions with analysis |
+| Player Detail | ✅ | 🚧 | Next to implement |
+| Game Detail | ✅ | 🚧 | Next to implement |
+| Fantasy | 🚧 | 🚧 | Placeholder only |
+| Team Colors | ✅ | ✅ | All 32 teams |
+| Real Player Stats | ✅ | ✅ | API-Sports integration |
+| News Feed | ✅ | ✅ | Team-specific articles |
+
+## 🔨 Building and Running
+
+### Using Android Studio (Recommended)
+1. Open the `StatSharkAndroid` directory in Android Studio
+2. Let Gradle sync complete
+3. Select a device or emulator (API 26+)
+4. Click Run or press Shift+F10
+
+### Using Gradle Command Line
+```bash
+cd StatSharkAndroid
+./gradlew assembleDebug          # Build debug APK
+./gradlew installDebug           # Install on connected device
+./gradlew assembleRelease        # Build release APK (requires signing)
+```
+
+Note: The Gradle wrapper needs to be generated on first setup. Android Studio handles this automatically.
 
 ---
 
