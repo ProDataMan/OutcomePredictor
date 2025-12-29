@@ -354,8 +354,7 @@ struct GameDetailView: View {
                         ForEach(historicalGames.prefix(5), id: \.id) { historicalGame in
                             HistoricalGameRow(
                                 game: historicalGame,
-                                currentHomeTeam: game.homeTeam.abbreviation,
-                                currentAwayTeam: game.awayTeam.abbreviation
+                                viewingTeam: sourceTeam?.abbreviation ?? game.homeTeam.abbreviation
                             )
                         }
                     }
@@ -781,30 +780,31 @@ struct GameDetailView: View {
 // Historical Game Row
 struct HistoricalGameRow: View {
     let game: GameDTO
-    let currentHomeTeam: String
-    let currentAwayTeam: String
+    let viewingTeam: String  // The team the user is viewing
 
     private var result: String {
         guard let homeScore = game.homeScore, let awayScore = game.awayScore else {
             return "N/A"
         }
 
-        // Determine which team won from current matchup perspective
-        let homeWon: Bool
-        if game.homeTeam.abbreviation == currentHomeTeam {
-            homeWon = homeScore > awayScore
+        // Determine if the viewing team won this historical game
+        let viewingTeamIsHome = game.homeTeam.abbreviation == viewingTeam
+        let viewingTeamWon: Bool
+        let viewingTeamScore: Int
+        let opponentScore: Int
+
+        if viewingTeamIsHome {
+            viewingTeamWon = homeScore > awayScore
+            viewingTeamScore = homeScore
+            opponentScore = awayScore
         } else {
-            homeWon = awayScore > homeScore
+            viewingTeamWon = awayScore > homeScore
+            viewingTeamScore = awayScore
+            opponentScore = homeScore
         }
 
-        let score: String
-        if game.homeTeam.abbreviation == currentHomeTeam {
-            score = "\(homeScore)-\(awayScore)"
-        } else {
-            score = "\(awayScore)-\(homeScore)"
-        }
-
-        return homeWon ? "W \(score)" : "L \(score)"
+        let score = "\(viewingTeamScore)-\(opponentScore)"
+        return viewingTeamWon ? "W \(score)" : "L \(score)"
     }
 
     var body: some View {
