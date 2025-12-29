@@ -18,7 +18,9 @@ public struct ESPNPlayerDataSource: Sendable {
 
     /// Fetch team roster with player stats for the season.
     public func fetchRoster(for team: Team, season: Int) async throws -> TeamRoster {
-        let urlString = "\(baseURL)/teams/\(team.abbreviation.lowercased())/roster?season=\(season)"
+        // ESPN's free API only provides current season roster
+        // Don't include season parameter as it causes empty results
+        let urlString = "\(baseURL)/teams/\(team.abbreviation.lowercased())/roster"
         guard let url = URL(string: urlString) else {
             throw DataSourceError.invalidURL(urlString)
         }
@@ -39,6 +41,8 @@ public struct ESPNPlayerDataSource: Sendable {
 
     private func parseRoster(from espnRoster: ESPNRosterResponse, team: Team, season: Int) -> TeamRoster {
         var players: [Player] = []
+        var playersWithPhotos = 0
+        var playersWithoutPhotos = 0
 
         // Iterate through position groups
         for positionGroup in espnRoster.athletes {
@@ -47,6 +51,13 @@ public struct ESPNPlayerDataSource: Sendable {
                 guard let displayName = athlete.displayName,
                       let position = athlete.position?.abbreviation else {
                     continue
+                }
+
+                // Track photo URL availability
+                if let headshot = athlete.headshot?.href, !headshot.isEmpty {
+                    playersWithPhotos += 1
+                } else {
+                    playersWithoutPhotos += 1
                 }
 
                 // ESPN's free API doesn't provide player statistics
@@ -66,6 +77,8 @@ public struct ESPNPlayerDataSource: Sendable {
                 players.append(player)
             }
         }
+
+        print("📸 ESPN Photo URL stats for \(team.abbreviation): \(playersWithPhotos) with photos, \(playersWithoutPhotos) without photos")
 
         return TeamRoster(team: team, players: players, season: season)
     }

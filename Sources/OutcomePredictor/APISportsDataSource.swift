@@ -116,6 +116,8 @@ public actor APISportsDataSource: Sendable {
     /// Parse roster from API-Sports response.
     private func parseRoster(from response: APISportsPlayersResponse, team: Team, season: Int) -> TeamRoster {
         var players: [Player] = []
+        var playersWithPhotos = 0
+        var playersWithoutPhotos = 0
 
         for playerData in response.response {
             guard let player = playerData.player,
@@ -130,6 +132,13 @@ public actor APISportsDataSource: Sendable {
             // Parse statistics
             let stats = parsePlayerStats(from: playerData.statistics, position: position)
 
+            // Track photo URL availability
+            if let photoURL = player.image, !photoURL.isEmpty {
+                playersWithPhotos += 1
+            } else {
+                playersWithoutPhotos += 1
+            }
+
             let nflPlayer = Player(
                 id: String(playerId),
                 name: playerName,
@@ -142,6 +151,8 @@ public actor APISportsDataSource: Sendable {
 
             players.append(nflPlayer)
         }
+
+        print("📸 Photo URL stats for \(team.abbreviation): \(playersWithPhotos) with photos, \(playersWithoutPhotos) without photos")
 
         return TeamRoster(team: team, players: players, season: season)
     }
