@@ -2,6 +2,7 @@ package com.statshark.nfl.ui.screens.predictions
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.statshark.nfl.data.model.GameDTO
 import com.statshark.nfl.data.model.PredictionDTO
+import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
 import java.text.SimpleDateFormat
 import java.util.*
@@ -94,7 +96,8 @@ fun PredictionsScreen(
                             prediction = uiState.predictions[game.id],
                             isLoading = game.id in uiState.loadingPredictions,
                             error = uiState.predictionErrors[game.id],
-                            onPredictClick = { viewModel.makePrediction(game) }
+                            onPredictClick = { viewModel.makePrediction(game) },
+                            navController = navController
                         )
                     }
                 }
@@ -153,7 +156,8 @@ fun GamePredictionCard(
     prediction: PredictionDTO?,
     isLoading: Boolean,
     error: String?,
-    onPredictClick: () -> Unit
+    onPredictClick: () -> Unit,
+    navController: NavController
 ) {
     val dateFormat = remember { SimpleDateFormat("EEE, MMM d 'at' h:mm a", Locale.US) }
 
@@ -172,7 +176,7 @@ fun GamePredictionCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Matchup
-            GameMatchup(game)
+            GameMatchup(game, navController)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -276,7 +280,7 @@ fun GameHeader(game: GameDTO, dateFormat: SimpleDateFormat) {
  * Game Matchup
  */
 @Composable
-fun GameMatchup(game: GameDTO) {
+fun GameMatchup(game: GameDTO, navController: NavController) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -286,7 +290,8 @@ fun GameMatchup(game: GameDTO) {
         TeamDisplay(
             team = game.awayTeam,
             isHome = false,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            navController = navController
         )
 
         // VS Separator
@@ -309,24 +314,31 @@ fun GameMatchup(game: GameDTO) {
         TeamDisplay(
             team = game.homeTeam,
             isHome = true,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            navController = navController
         )
     }
 }
 
 /**
  * Team Display
+ * Clickable team display that navigates to team detail
  */
 @Composable
 fun TeamDisplay(
     team: com.statshark.nfl.data.model.TeamDTO,
     isHome: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavController
 ) {
     val colors = TeamColors.getTeamColors(team.abbreviation)
 
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .clickable {
+                navController.navigate(Screen.TeamDetail.createRoute(team.abbreviation))
+            }
+            .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(

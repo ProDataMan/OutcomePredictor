@@ -1,5 +1,7 @@
 package com.statshark.nfl.ui.screens.teams
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -609,13 +612,25 @@ fun NewsTab(
 
 /**
  * News Card
+ * Clickable card that opens article in browser
  */
 @Composable
 fun NewsCard(article: ArticleDTO) {
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.US) }
+    val context = LocalContext.current
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                // Open article URL in browser
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(article.url))
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    // Silently fail if unable to open browser
+                }
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
