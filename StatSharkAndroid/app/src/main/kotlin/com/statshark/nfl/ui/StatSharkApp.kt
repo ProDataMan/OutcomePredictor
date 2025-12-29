@@ -7,14 +7,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.navigation.bottomNavItems
 import com.statshark.nfl.ui.screens.fantasy.FantasyScreen
 import com.statshark.nfl.ui.screens.predictions.PredictionsScreen
+import com.statshark.nfl.ui.screens.teams.TeamDetailScreen
 import com.statshark.nfl.ui.screens.teams.TeamsScreen
 
 /**
@@ -79,8 +82,19 @@ fun StatSharkApp() {
                 FantasyScreen(navController = navController)
             }
 
-            // TODO: Add detail screens
-            // composable(Screen.TeamDetail.route) { ... }
+            // Detail screens
+            composable(
+                route = Screen.TeamDetail.route,
+                arguments = listOf(navArgument("teamId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val teamId = backStackEntry.arguments?.getString("teamId") ?: return@composable
+                TeamDetailScreen(
+                    teamId = teamId,
+                    navController = navController
+                )
+            }
+
+            // TODO: Add other detail screens
             // composable(Screen.GameDetail.route) { ... }
             // composable(Screen.PlayerDetail.route) { ... }
         }

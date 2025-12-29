@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.statshark.nfl.data.model.TeamDTO
+import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
 
 /**
@@ -75,8 +76,7 @@ fun TeamsScreen(
                     TeamsGrid(
                         teams = uiState.filteredTeams,
                         onTeamClick = { team ->
-                            // TODO: Navigate to team detail
-                            // navController.navigate(Screen.TeamDetail.createRoute(team.abbreviation))
+                            navController.navigate(Screen.TeamDetail.createRoute(team.abbreviation))
                         }
                     )
                 }
