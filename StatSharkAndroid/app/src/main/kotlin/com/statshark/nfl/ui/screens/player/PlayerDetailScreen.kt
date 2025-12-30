@@ -24,9 +24,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.data.model.PlayerStatsDTO
 import com.statshark.nfl.ui.theme.TeamColors
+import com.statshark.nfl.util.ImageCacheManager
 
 /**
  * Player Detail Screen
@@ -41,6 +43,9 @@ fun PlayerDetailScreen(
 ) {
     val teamColors = TeamColors.getTeamColors(teamAbbreviation)
     val scrollState = rememberScrollState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val placeholderResId = ImageCacheManager.getTeamHelmetPlaceholder(teamAbbreviation, context)
+        ?: com.statshark.nfl.R.drawable.ic_helmet_placeholder
 
     Scaffold(
         topBar = {
@@ -122,7 +127,14 @@ fun PlayerHeader(
         ) {
             if (player.photoURL != null) {
                 AsyncImage(
-                    model = player.photoURL,
+                    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                        .data(player.photoURL)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .placeholder(placeholderResId)
+                        .error(placeholderResId)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = player.name,
                     modifier = Modifier
                         .fillMaxSize()

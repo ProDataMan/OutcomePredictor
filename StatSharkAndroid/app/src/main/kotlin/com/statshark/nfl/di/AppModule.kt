@@ -1,13 +1,17 @@
 package com.statshark.nfl.di
 
+import android.content.Context
+import coil.ImageLoader
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.statshark.nfl.BuildConfig
 import com.statshark.nfl.api.StatSharkApiService
 import com.statshark.nfl.data.repository.NFLRepository
+import com.statshark.nfl.util.ImageCacheManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -71,5 +75,11 @@ object AppModule {
     @Singleton
     fun provideNFLRepository(apiService: StatSharkApiService): NFLRepository {
         return NFLRepository(apiService)
+    }
+
+    @Provides
+    @Singleton
+    fun provideImageLoader(@ApplicationContext context: Context): ImageLoader {
+        return ImageCacheManager.createImageLoader(context)
     }
 }

@@ -37,40 +37,41 @@ fun StatSharkApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    Scaffold(
-        bottomBar = {
-            // Only show bottom bar on main screens
-            if (currentDestination?.route in bottomNavItems.map { it.route }) {
-                NavigationBar {
-                    bottomNavItems.forEach { item ->
-                        NavigationBarItem(
-                            icon = {
-                                // TODO: Replace with proper Material Icons
-                                Icon(
-                                    imageVector = Icons.Filled.Home,
-                                    contentDescription = item.title
-                                )
-                            },
-                            label = { Text(item.title) },
-                            selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    // Pop up to the start destination to avoid building up a large stack
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+    Box {
+        Scaffold(
+            bottomBar = {
+                // Only show bottom bar on main screens
+                if (currentDestination?.route in bottomNavItems.map { it.route }) {
+                    NavigationBar {
+                        bottomNavItems.forEach { item ->
+                            NavigationBarItem(
+                                icon = {
+                                    // TODO: Replace with proper Material Icons
+                                    Icon(
+                                        imageVector = Icons.Filled.Home,
+                                        contentDescription = item.title
+                                    )
+                                },
+                                label = { Text(item.title) },
+                                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                                onClick = {
+                                    navController.navigate(item.route) {
+                                        // Pop up to the start destination to avoid building up a large stack
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        // Avoid multiple copies of the same destination
+                                        launchSingleTop = true
+                                        // Restore state when reselecting a previously selected item
+                                        restoreState = true
                                     }
-                                    // Avoid multiple copies of the same destination
-                                    launchSingleTop = true
-                                    // Restore state when reselecting a previously selected item
-                                    restoreState = true
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
-        }
-    ) { innerPadding ->
+        ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Screen.Teams.route,
@@ -145,4 +146,7 @@ fun StatSharkApp() {
             }
         }
     }
+
+    // Global error handling overlay (matches iOS .withErrorHandling())
+    com.statshark.nfl.ui.components.ErrorHandlingOverlay()
 }
