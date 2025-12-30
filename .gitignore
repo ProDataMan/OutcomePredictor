@@ -133,3 +133,6 @@ BUILD_*.md
 NFLOutcomePredictor/.build/
 NFLOutcomePredictor/xcuserdata/
 NFLOutcomePredictor/DerivedData/
+
+# Android local build configuration
+StatSharkAndroid/gradle.properties

@@ -125,23 +125,45 @@ fun GameHeaderCard(game: GameDTO) {
 
             // Game Status
             val isCompleted = game.homeScore != null && game.awayScore != null
+            val isInProgress = !isCompleted && game.status?.lowercase() == "in progress"
+
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (isCompleted)
-                    MaterialTheme.colorScheme.primaryContainer
-                else
-                    MaterialTheme.colorScheme.tertiaryContainer
+                color = when {
+                    isCompleted -> MaterialTheme.colorScheme.primaryContainer
+                    isInProgress -> Color(0xFFFF5722).copy(alpha = 0.2f)
+                    else -> MaterialTheme.colorScheme.tertiaryContainer
+                }
             ) {
-                Text(
-                    text = if (isCompleted) "Final" else "Upcoming",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isCompleted)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else
-                        MaterialTheme.colorScheme.onTertiaryContainer,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
+                ) {
+                    if (isInProgress) {
+                        Icon(
+                            painter = painterResource(android.R.drawable.presence_video_online),
+                            contentDescription = "Live",
+                            tint = Color(0xFFFF5722),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = when {
+                            isCompleted -> "Final"
+                            isInProgress -> "LIVE"
+                            else -> "Upcoming"
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = when {
+                            isCompleted -> MaterialTheme.colorScheme.onPrimaryContainer
+                            isInProgress -> Color(0xFFFF5722)
+                            else -> MaterialTheme.colorScheme.onTertiaryContainer
+                        }
+                    )
+                }
             }
         }
     }

@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct GameDetailView: View {
-    let game: GameDTO
+    let initialGame: GameDTO
     let sourceTeam: TeamDTO? // Team we navigated from
     @StateObject private var dataManager = DataManager.shared
+    @State private var currentGame: GameDTO
     @State private var weather: GameWeatherDTO?
     @State private var isLoadingWeather = false
     @State private var prediction: PredictionResult?
@@ -13,11 +14,15 @@ struct GameDetailView: View {
     @State private var isLoadingNews = false
     @State private var historicalGames: [GameDTO] = []
     @State private var isLoadingHistory = false
+    @State private var liveScoreTimer: Timer?
 
     init(game: GameDTO, sourceTeam: TeamDTO? = nil) {
-        self.game = game
+        self.initialGame = game
+        self._currentGame = State(initialValue: game)
         self.sourceTeam = sourceTeam
     }
+
+    private var game: GameDTO { currentGame }
 
     private var isCompleted: Bool {
         game.status?.lowercased() == "final" || (game.homeScore != nil && game.awayScore != nil && game.status?.lowercased() != "in progress")
@@ -97,6 +102,12 @@ struct GameDetailView: View {
             await loadUpcomingGames()
             await loadNews()
             await loadHistoricalMatchup()
+        }
+        .onAppear {
+            startLiveScoreUpdates()
+        }
+        .onDisappear {
+            stopLiveScoreUpdates()
         }
     }
 
@@ -781,6 +792,57 @@ struct GameDetailView: View {
 
         isLoadingHistory = false
     }
+
+    // MARK: - Live Score Updates
+
+    private func startLiveScoreUpdates() {
+        // Only start polling if game is in progress
+        guard isInProgress else { return }
+
+        // Initial refresh
+        Task {
+            await refreshGameData()
+        }
+
+        // Set up timer for 30-second intervals
+        liveScoreTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+            Task {
+                await refreshGameData()
+            }
+        }
+    }
+
+    private func stopLiveScoreUpdates() {
+        liveScoreTimer?.invalidate()
+        liveScoreTimer = nil
+    }
+
+    private func refreshGameData() async {
+        do {
+            let apiClient = APIClient()
+
+            // Try to fetch the game by looking through all games
+            // Since we don't have a direct game-by-ID endpoint, we'll fetch upcoming games
+            let games = try await apiClient.fetchUpcomingGames()
+
+            // Find our game in the list
+            if let updatedGame = games.first(where: {
+                $0.homeTeam.abbreviation == game.homeTeam.abbreviation &&
+                $0.awayTeam.abbreviation == game.awayTeam.abbreviation &&
+                $0.week == game.week &&
+                $0.season == game.season
+            }) {
+                currentGame = updatedGame
+
+                // Stop polling if game is now completed
+                if isCompleted {
+                    stopLiveScoreUpdates()
+                }
+            }
+        } catch {
+            // Silently fail - we'll try again on next interval
+        }
+    }
 }
 
 // Historical Game Row
@@ -873,8 +935,26 @@ struct UpcomingGameCard: View {
     let game: GameDTO
     let isSelected: Bool
 
+    private var isInProgress: Bool {
+        game.status?.lowercased() == "in progress" || (game.date < Date() && game.homeScore == nil && game.awayScore == nil)
+    }
+
     var body: some View {
         VStack(spacing: 8) {
+            // LIVE badge for in-progress games
+            if isInProgress {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 6, height: 6)
+                    Text("LIVE")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.red)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+
             // Date and time
             VStack(spacing: 2) {
                 Text(game.date, style: .date)
@@ -906,18 +986,25 @@ struct UpcomingGameCard: View {
                 }
             }
 
-            // Week indicator
-            Text("Week \(game.week ?? 0)")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            // Week indicator or live scores
+            if isInProgress, let homeScore = game.homeScore, let awayScore = game.awayScore {
+                Text("\(awayScore) - \(homeScore)")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.red)
+            } else {
+                Text("Week \(game.week ?? 0)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
         .padding(12)
         .frame(width: 140)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color(UIColor.systemGray6))
+        .background(isInProgress ? Color.red.opacity(0.1) : (isSelected ? Color.accentColor.opacity(0.2) : Color(UIColor.systemGray6)))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                .stroke(isInProgress ? Color.red : (isSelected ? Color.accentColor : Color.clear), lineWidth: 2)
         )
     }
 }
