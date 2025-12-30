@@ -20,7 +20,11 @@ public struct ESPNPlayerDataSource: Sendable {
     public func fetchRoster(for team: Team, season: Int) async throws -> TeamRoster {
         // ESPN's free API only provides current season roster
         // Don't include season parameter as it causes empty results
-        let urlString = "\(baseURL)/teams/\(team.abbreviation.lowercased())/roster"
+
+        // Convert team abbreviation to ESPN format (WAS → WSH)
+        let espnAbbreviation = convertToESPNAbbreviation(team.abbreviation)
+
+        let urlString = "\(baseURL)/teams/\(espnAbbreviation.lowercased())/roster"
         guard let url = URL(string: urlString) else {
             throw DataSourceError.invalidURL(urlString)
         }
@@ -37,6 +41,14 @@ public struct ESPNPlayerDataSource: Sendable {
 
         let espnRoster = try JSONDecoder().decode(ESPNRosterResponse.self, from: data)
         return parseRoster(from: espnRoster, team: team, season: season)
+    }
+
+    /// Convert our abbreviations to ESPN's format.
+    private func convertToESPNAbbreviation(_ abbreviation: String) -> String {
+        switch abbreviation {
+        case "WAS": return "WSH"  // Washington Commanders
+        default: return abbreviation
+        }
     }
 
     private func parseRoster(from espnRoster: ESPNRosterResponse, team: Team, season: Int) -> TeamRoster {
@@ -61,8 +73,29 @@ public struct ESPNPlayerDataSource: Sendable {
                 }
 
                 // ESPN's free API doesn't provide player statistics
-                // Add sample stats for demonstration (would use paid API in production)
-                let stats = generateSampleStats(for: position, playerName: displayName)
+                // Return nil for stats - only use real stats from API-Sports
+                let stats: PlayerStats? = nil
+
+                // Extract bio data from ESPN
+                let age = athlete.age
+                let height = athlete.displayHeight
+                let collegeName = athlete.college?.name
+
+                // Parse weight from displayWeight string like "215 lbs" to Int
+                let weight: Int? = if let displayWeight = athlete.displayWeight {
+                    Int(displayWeight.components(separatedBy: CharacterSet.decimalDigits.inverted).joined())
+                } else if let weightValue = athlete.weight {
+                    Int(weightValue)
+                } else {
+                    nil
+                }
+
+                // Calculate experience from debut year
+                let experience: Int? = if let debutYear = athlete.debutYear {
+                    season - debutYear
+                } else {
+                    nil
+                }
 
                 let player = Player(
                     id: athlete.id,
@@ -71,7 +104,12 @@ public struct ESPNPlayerDataSource: Sendable {
                     jerseyNumber: athlete.jersey,
                     photoURL: athlete.headshot?.href,
                     team: team,
-                    stats: stats
+                    stats: stats,
+                    height: height,
+                    weight: weight,
+                    age: age,
+                    college: collegeName,
+                    experience: experience
                 )
 
                 players.append(player)
@@ -81,53 +119,6 @@ public struct ESPNPlayerDataSource: Sendable {
         print("📸 ESPN Photo URL stats for \(team.abbreviation): \(playersWithPhotos) with photos, \(playersWithoutPhotos) without photos")
 
         return TeamRoster(team: team, players: players, season: season)
-    }
-
-    /// Generate sample stats for demonstration
-    /// NOTE: ESPN's free API doesn't provide player statistics
-    /// In production, use ESPN's premium API or another stats provider
-    private func generateSampleStats(for position: String, playerName: String) -> PlayerStats? {
-        // Only generate stats for key positions and common player names to keep it realistic
-        switch position {
-        case "QB":
-            return PlayerStats(
-                passingYards: Int.random(in: 2800...4500),
-                passingTouchdowns: Int.random(in: 20...35),
-                passingInterceptions: Int.random(in: 8...15),
-                passingCompletions: Int.random(in: 300...450),
-                passingAttempts: Int.random(in: 450...650),
-                rushingYards: Int.random(in: 50...400),
-                rushingTouchdowns: Int.random(in: 2...8),
-                rushingAttempts: Int.random(in: 40...90)
-            )
-        case "RB":
-            return PlayerStats(
-                rushingYards: Int.random(in: 400...1400),
-                rushingTouchdowns: Int.random(in: 4...15),
-                rushingAttempts: Int.random(in: 100...300),
-                receivingYards: Int.random(in: 150...600),
-                receivingTouchdowns: Int.random(in: 1...5),
-                receptions: Int.random(in: 20...80),
-                targets: Int.random(in: 30...100)
-            )
-        case "WR":
-            return PlayerStats(
-                receivingYards: Int.random(in: 300...1500),
-                receivingTouchdowns: Int.random(in: 3...12),
-                receptions: Int.random(in: 40...120),
-                targets: Int.random(in: 60...180)
-            )
-        case "TE":
-            return PlayerStats(
-                receivingYards: Int.random(in: 200...1000),
-                receivingTouchdowns: Int.random(in: 2...10),
-                receptions: Int.random(in: 30...100),
-                targets: Int.random(in: 45...130)
-            )
-        default:
-            // Don't generate stats for other positions
-            return nil
-        }
     }
 
     private func parsePlayerStats(_ stats: [ESPNStatistic], position: String) -> PlayerStats {
@@ -214,6 +205,12 @@ private struct ESPNAthlete: Codable {
     let position: ESPNPosition?
     let headshot: ESPNHeadshot?
     let statistics: [ESPNStatistic]?
+    let age: Int?
+    let displayHeight: String?
+    let displayWeight: String?
+    let weight: Double?
+    let debutYear: Int?
+    let college: ESPNCollege?
 }
 
 private struct ESPNPosition: Codable {
@@ -222,6 +219,10 @@ private struct ESPNPosition: Codable {
 
 private struct ESPNHeadshot: Codable {
     let href: String
+}
+
+private struct ESPNCollege: Codable {
+    let name: String?
 }
 
 private struct ESPNStatistic: Codable {

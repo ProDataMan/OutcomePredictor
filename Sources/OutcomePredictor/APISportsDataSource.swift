@@ -132,6 +132,18 @@ public actor APISportsDataSource: Sendable {
             // Parse statistics
             let stats = parsePlayerStats(from: playerData.statistics, position: position)
 
+            // Extract bio data from API-Sports
+            let age = player.age
+            let heightUS = player.height?.US  // e.g., "6-2" or "6'2\""
+            let weightUS = player.weight?.US  // e.g., "215 lbs"
+
+            // Parse weight from string like "215 lbs" to Int
+            let weight: Int? = if let weightStr = weightUS {
+                Int(weightStr.components(separatedBy: CharacterSet.decimalDigits.inverted).joined())
+            } else {
+                nil
+            }
+
             // Track photo URL availability
             if let photoURL = player.image, !photoURL.isEmpty {
                 playersWithPhotos += 1
@@ -146,7 +158,12 @@ public actor APISportsDataSource: Sendable {
                 jerseyNumber: playerData.number,
                 photoURL: player.image, // API-Sports provides headshot URLs!
                 team: team,
-                stats: stats
+                stats: stats,
+                height: heightUS,
+                weight: weight,
+                age: age,
+                college: nil, // API-Sports doesn't provide college info
+                experience: nil // API-Sports doesn't provide experience
             )
 
             players.append(nflPlayer)

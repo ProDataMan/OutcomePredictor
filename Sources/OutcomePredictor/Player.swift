@@ -11,6 +11,11 @@ public struct Player: Codable, Sendable, Identifiable {
     public let photoURL: String?
     public let team: Team
     public let stats: PlayerStats?
+    public let height: String?
+    public let weight: Int?
+    public let age: Int?
+    public let college: String?
+    public let experience: Int?
 
     public init(
         id: String,
@@ -19,7 +24,12 @@ public struct Player: Codable, Sendable, Identifiable {
         jerseyNumber: String? = nil,
         photoURL: String? = nil,
         team: Team,
-        stats: PlayerStats? = nil
+        stats: PlayerStats? = nil,
+        height: String? = nil,
+        weight: Int? = nil,
+        age: Int? = nil,
+        college: String? = nil,
+        experience: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -28,6 +38,11 @@ public struct Player: Codable, Sendable, Identifiable {
         self.photoURL = photoURL
         self.team = team
         self.stats = stats
+        self.height = height
+        self.weight = weight
+        self.age = age
+        self.college = college
+        self.experience = experience
     }
 }
 

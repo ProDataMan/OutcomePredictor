@@ -21,15 +21,15 @@ struct PlayerDetailView: View {
             VStack(spacing: 24) {
                 // Player header with photo
                 VStack(spacing: 16) {
-                    // Player photo
+                    // Player photo with team helmet placeholder
                     if let photoURL = player.photoURL, let url = URL(string: photoURL) {
-                        AsyncImage(url: url) { image in
+                        CachedAsyncImage(url: url) { image in
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                         } placeholder: {
                             ZStack {
-                                PlayerPositionIcon(position: player.position, size: 150)
+                                TeamIconView(teamAbbreviation: teamAbbreviation, size: 150)
                                 ProgressView()
                             }
                         }
@@ -41,7 +41,7 @@ struct PlayerDetailView: View {
                         )
                         .shadow(radius: 10)
                     } else {
-                        PlayerPositionIcon(position: player.position, size: 150)
+                        TeamIconView(teamAbbreviation: teamAbbreviation, size: 150)
                             .overlay(
                                 Circle()
                                     .stroke(Color.accentColor, lineWidth: 4)

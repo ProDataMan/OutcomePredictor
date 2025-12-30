@@ -253,6 +253,11 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
     public let jerseyNumber: String?
     public let photoURL: String?
     public let stats: PlayerStatsDTO?
+    public let height: String?
+    public let weight: Int?
+    public let age: Int?
+    public let college: String?
+    public let experience: Int?
 
     public init(
         id: String,
@@ -260,7 +265,12 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
         position: String,
         jerseyNumber: String? = nil,
         photoURL: String? = nil,
-        stats: PlayerStatsDTO? = nil
+        stats: PlayerStatsDTO? = nil,
+        height: String? = nil,
+        weight: Int? = nil,
+        age: Int? = nil,
+        college: String? = nil,
+        experience: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -268,6 +278,11 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
         self.jerseyNumber = jerseyNumber
         self.photoURL = photoURL
         self.stats = stats
+        self.height = height
+        self.weight = weight
+        self.age = age
+        self.college = college
+        self.experience = experience
     }
 }
 

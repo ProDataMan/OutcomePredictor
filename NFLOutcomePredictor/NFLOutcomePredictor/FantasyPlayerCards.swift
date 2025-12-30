@@ -22,19 +22,23 @@ struct FantasyPlayerCard: View {
     var body: some View {
         NavigationLink(destination: PlayerDetailView(player: player, teamAbbreviation: team.abbreviation, showFantasyButton: true)) {
             HStack(spacing: 12) {
-                // Player photo
+                // Player photo with team helmet placeholder
                 if let photoURL = player.photoURL, let url = URL(string: photoURL) {
-                    AsyncImage(url: url) { image in
+                    CachedAsyncImage(url: url) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        PlayerPositionIcon(position: player.position, size: 60)
+                        ZStack {
+                            TeamIconView(teamAbbreviation: team.abbreviation, size: 60)
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
                     }
                     .frame(width: 60, height: 60)
                     .clipShape(Circle())
                 } else {
-                    PlayerPositionIcon(position: player.position, size: 60)
+                    TeamIconView(teamAbbreviation: team.abbreviation, size: 60)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -115,19 +119,23 @@ struct FantasyRosterPlayerCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Player photo
+            // Player photo with team helmet placeholder
             if let photoURL = player.photoURL, let url = URL(string: photoURL) {
-                AsyncImage(url: url) { image in
+                CachedAsyncImage(url: url) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    PlayerPositionIcon(position: player.position, size: 50)
+                    ZStack {
+                        TeamIconView(teamAbbreviation: player.teamAbbreviation, size: 50)
+                        ProgressView()
+                            .scaleEffect(0.7)
+                    }
                 }
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())
             } else {
-                PlayerPositionIcon(position: player.position, size: 50)
+                TeamIconView(teamAbbreviation: player.teamAbbreviation, size: 50)
             }
 
             VStack(alignment: .leading, spacing: 4) {

@@ -128,7 +128,12 @@ extension PlayerDTO {
             position: player.position,
             jerseyNumber: player.jerseyNumber,
             photoURL: player.photoURL,
-            stats: stats
+            stats: stats,
+            height: player.height,
+            weight: player.weight,
+            age: player.age,
+            college: player.college,
+            experience: player.experience
         )
     }
 }

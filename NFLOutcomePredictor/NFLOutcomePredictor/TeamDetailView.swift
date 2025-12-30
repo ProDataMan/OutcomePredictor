@@ -222,7 +222,7 @@ struct PlayerStatsSection: View {
         VStack(spacing: 12) {
             ForEach(keyPlayers) { player in
                 NavigationLink(destination: PlayerDetailView(player: player, teamAbbreviation: roster.team.abbreviation)) {
-                    PlayerStatCard(player: player)
+                    PlayerStatCard(player: player, teamAbbreviation: roster.team.abbreviation)
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -233,40 +233,27 @@ struct PlayerStatsSection: View {
 
 struct PlayerStatCard: View {
     let player: PlayerDTO
+    let teamAbbreviation: String
 
     var body: some View {
         HStack(spacing: 12) {
-            // Player photo or icon
+            // Player photo with team helmet placeholder
             if let photoURL = player.photoURL, let url = URL(string: photoURL) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .empty:
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    ZStack {
+                        TeamIconView(teamAbbreviation: teamAbbreviation, size: 50)
                         ProgressView()
-                            .frame(width: 50, height: 50)
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure(let error):
-                        PlayerPositionIcon(position: player.position, size: 50)
-                            .onAppear {
-                                print("❌ Failed to load image for \(player.name): \(error.localizedDescription)")
-                                print("   URL: \(photoURL)")
-                            }
-                    @unknown default:
-                        PlayerPositionIcon(position: player.position, size: 50)
+                            .scaleEffect(0.7)
                     }
                 }
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())
-                .onAppear {
-                    print("🔍 Loading image for \(player.name): \(photoURL)")
-                }
             } else {
-                PlayerPositionIcon(position: player.position, size: 50)
-                    .onAppear {
-                        print("⚠️ No photoURL for \(player.name)")
-                    }
+                TeamIconView(teamAbbreviation: teamAbbreviation, size: 50)
             }
 
             VStack(alignment: .leading, spacing: 4) {
