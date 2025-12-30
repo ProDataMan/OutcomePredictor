@@ -16,7 +16,6 @@
         <path
             android:strokeColor="#BDBDBD"
             android:strokeWidth="2"
-            android:fillColor="android:color/transparent"
             android:pathData="M35,55 L65,55 M35,60 L65,60 M35,65 L65,65" />
 
         <!-- Helmet stripe -->

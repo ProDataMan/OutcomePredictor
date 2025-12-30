@@ -1,5 +1,6 @@
 package com.statshark.nfl.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -72,81 +73,82 @@ fun StatSharkApp() {
                 }
             }
         ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Teams.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Teams.route) {
-                TeamsScreen(navController = navController)
-            }
-
-            composable(Screen.Predictions.route) {
-                PredictionsScreen(navController = navController)
-            }
-
-            composable(Screen.Fantasy.route) {
-                FantasyScreen(navController = navController)
-            }
-
-            // Detail screens
-            composable(
-                route = Screen.TeamDetail.route,
-                arguments = listOf(navArgument("teamId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val teamId = backStackEntry.arguments?.getString("teamId") ?: return@composable
-                TeamDetailScreen(
-                    teamId = teamId,
-                    navController = navController
-                )
-            }
-
-            composable(
-                route = Screen.PlayerDetail.route,
-                arguments = listOf(
-                    navArgument("playerId") { type = NavType.StringType },
-                    navArgument("teamId") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                val playerId = backStackEntry.arguments?.getString("playerId") ?: return@composable
-                val teamId = backStackEntry.arguments?.getString("teamId") ?: return@composable
-
-                // Retrieve player from cache
-                val player = PlayerCache.get(playerId)
-                if (player != null) {
-                    PlayerDetailScreen(
-                        player = player,
-                        teamAbbreviation = teamId,
-                        navController = navController
-                    )
-                } else {
-                    // Player not in cache, navigate back
-                    navController.navigateUp()
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Teams.route,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable(Screen.Teams.route) {
+                    TeamsScreen(navController = navController)
                 }
-            }
 
-            // Game Detail Screen
-            composable(
-                route = Screen.GameDetail.route,
-                arguments = listOf(navArgument("gameId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val gameId = backStackEntry.arguments?.getString("gameId") ?: return@composable
+                composable(Screen.Predictions.route) {
+                    PredictionsScreen(navController = navController)
+                }
 
-                // Retrieve game from cache
-                val game = GameCache.get(gameId)
-                if (game != null) {
-                    GameDetailScreen(
-                        game = game,
+                composable(Screen.Fantasy.route) {
+                    FantasyScreen(navController = navController)
+                }
+
+                // Detail screens
+                composable(
+                    route = Screen.TeamDetail.route,
+                    arguments = listOf(navArgument("teamId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val teamId = backStackEntry.arguments?.getString("teamId") ?: return@composable
+                    TeamDetailScreen(
+                        teamId = teamId,
                         navController = navController
                     )
-                } else {
-                    // Game not in cache, navigate back
-                    navController.navigateUp()
+                }
+
+                composable(
+                    route = Screen.PlayerDetail.route,
+                    arguments = listOf(
+                        navArgument("playerId") { type = NavType.StringType },
+                        navArgument("teamId") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    val playerId = backStackEntry.arguments?.getString("playerId") ?: return@composable
+                    val teamId = backStackEntry.arguments?.getString("teamId") ?: return@composable
+
+                    // Retrieve player from cache
+                    val player = PlayerCache.get(playerId)
+                    if (player != null) {
+                        PlayerDetailScreen(
+                            player = player,
+                            teamAbbreviation = teamId,
+                            navController = navController
+                        )
+                    } else {
+                        // Player not in cache, navigate back
+                        navController.navigateUp()
+                    }
+                }
+
+                // Game Detail Screen
+                composable(
+                    route = Screen.GameDetail.route,
+                    arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val gameId = backStackEntry.arguments?.getString("gameId") ?: return@composable
+
+                    // Retrieve game from cache
+                    val game = GameCache.get(gameId)
+                    if (game != null) {
+                        GameDetailScreen(
+                            game = game,
+                            navController = navController
+                        )
+                    } else {
+                        // Game not in cache, navigate back
+                        navController.navigateUp()
+                    }
                 }
             }
         }
-    }
 
-    // Global error handling overlay (matches iOS .withErrorHandling())
-    com.statshark.nfl.ui.components.ErrorHandlingOverlay()
+        // Global error handling overlay (matches iOS .withErrorHandling())
+        com.statshark.nfl.ui.components.ErrorHandlingOverlay()
+    }
 }

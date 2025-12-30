@@ -9,6 +9,7 @@ import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.data.model.TeamDTO
 import com.statshark.nfl.data.repository.NFLRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,7 +65,11 @@ class TeamDetailViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(team = team)
 
                     if (team != null) {
+                        // Prioritize roster load
                         loadRoster(team.abbreviation, _uiState.value.selectedSeason)
+
+                        // Delay load for non-essential data
+                        delay(300) // 300ms delay
                         loadGames(team.abbreviation, _uiState.value.selectedSeason)
                         loadNews(team.abbreviation)
                     }

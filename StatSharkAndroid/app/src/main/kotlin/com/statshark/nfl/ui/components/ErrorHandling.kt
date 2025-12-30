@@ -3,7 +3,6 @@ package com.statshark.nfl.ui.components
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -141,7 +140,7 @@ fun SharkWithNoseRing(
 @Composable
 fun ErrorOverlay(
     error: AppError,
-    onDismiss: () -> Void
+    onDismiss: () -> Unit
 ) {
     var showDetails by remember { mutableStateOf(false) }
 
@@ -231,7 +230,7 @@ private fun ErrorMessageView(
                     AnimatedVisibility(
                         visible = showFirstMessage,
                         enter = scaleIn() + fadeIn(),
-                        exit = slideOutStart() + fadeOut()
+                        exit = slideOutHorizontally() + fadeOut()
                     ) {
                         Text(
                             text = "Awe Snap, Something bad happened!",
@@ -467,7 +466,7 @@ private fun DetailSection(
  */
 object ErrorHandler {
     private val _currentError = mutableStateOf<AppError?>(null)
-    val currentError: AppError? get() = _currentError.value
+    val currentError: AppError? by _currentError
 
     fun handle(error: Throwable, context: String = "") {
         _currentError.value = AppError(
