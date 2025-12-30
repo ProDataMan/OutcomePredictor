@@ -1,6 +1,8 @@
 package com.statshark.nfl.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -13,10 +15,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.statshark.nfl.data.cache.GameCache
 import com.statshark.nfl.data.cache.PlayerCache
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.navigation.bottomNavItems
 import com.statshark.nfl.ui.screens.fantasy.FantasyScreen
+import com.statshark.nfl.ui.screens.game.GameDetailScreen
 import com.statshark.nfl.ui.screens.player.PlayerDetailScreen
 import com.statshark.nfl.ui.screens.predictions.PredictionsScreen
 import com.statshark.nfl.ui.screens.teams.TeamDetailScreen
@@ -43,7 +47,7 @@ fun StatSharkApp() {
                             icon = {
                                 // TODO: Replace with proper Material Icons
                                 Icon(
-                                    imageVector = androidx.compose.material.icons.Icons.Default.Home,
+                                    imageVector = Icons.Filled.Home,
                                     contentDescription = item.title
                                 )
                             },
@@ -120,8 +124,25 @@ fun StatSharkApp() {
                 }
             }
 
-            // TODO: Add other detail screens
-            // composable(Screen.GameDetail.route) { ... }
+            // Game Detail Screen
+            composable(
+                route = Screen.GameDetail.route,
+                arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val gameId = backStackEntry.arguments?.getString("gameId") ?: return@composable
+
+                // Retrieve game from cache
+                val game = GameCache.get(gameId)
+                if (game != null) {
+                    GameDetailScreen(
+                        game = game,
+                        navController = navController
+                    )
+                } else {
+                    // Game not in cache, navigate back
+                    navController.navigateUp()
+                }
+            }
         }
     }
 }

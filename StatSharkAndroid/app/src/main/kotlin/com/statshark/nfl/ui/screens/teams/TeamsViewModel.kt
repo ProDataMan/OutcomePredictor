@@ -83,7 +83,8 @@ class TeamsViewModel @Inject constructor(
     /**
      * Filter teams by conference
      */
-    private fun filterTeams(teams: List<TeamDTO>, filter: ConferenceFilter): List<TeamDTO> {
+    private fun filterTeams(teams: List<TeamDTO>?, filter: ConferenceFilter): List<TeamDTO> {
+        if (teams == null) return emptyList()
         return when (filter) {
             ConferenceFilter.ALL -> teams.sortedBy { it.name }
             ConferenceFilter.NFC -> teams.filter { it.conference == "NFC" }.sortedBy { it.name }

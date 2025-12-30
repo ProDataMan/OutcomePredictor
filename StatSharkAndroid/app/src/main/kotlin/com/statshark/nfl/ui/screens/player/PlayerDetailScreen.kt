@@ -48,7 +48,7 @@ fun PlayerDetailScreen(
                 title = { Text("Player Stats") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -96,7 +96,7 @@ fun PlayerDetailScreen(
 fun PlayerHeader(
     player: PlayerDTO,
     teamAbbreviation: String,
-    teamColors: com.statshark.nfl.ui.theme.TeamColorsData
+    teamColors: TeamColors.TeamBranding
 ) {
     Column(
         modifier = Modifier
@@ -131,7 +131,7 @@ fun PlayerHeader(
                 )
             } else {
                 Icon(
-                    imageVector = Icons.Default.Person,
+                    imageVector = Icons.Filled.Person,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(80.dp)
@@ -526,7 +526,7 @@ fun NoStatsAvailable() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = Icons.Filled.Person,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)

@@ -105,7 +105,7 @@ struct GameDetailView: View {
     private var gameHeaderCard: some View {
         VStack(spacing: 12) {
             // Week and Season
-            Text("Week \(game.week ?? 0) • \(game.season ?? 2025) Season")
+            Text("Week \(game.week ?? 0) • \(String(game.season ?? 2025)) Season")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
@@ -368,28 +368,34 @@ struct GameDetailView: View {
     }
 
     private var seriesRecord: some View {
-        let homeWins = historicalGames.filter { game in
-            guard let homeScore = game.homeScore, let awayScore = game.awayScore else { return false }
-            if game.homeTeam.abbreviation == self.game.homeTeam.abbreviation {
+        // Determine which team to show on left (viewing team if available, otherwise home team)
+        let leftTeam = sourceTeam?.abbreviation ?? game.homeTeam.abbreviation
+        let rightTeam = (leftTeam == game.homeTeam.abbreviation) ? game.awayTeam.abbreviation : game.homeTeam.abbreviation
+
+        let leftTeamWins = historicalGames.filter { historicalGame in
+            guard let homeScore = historicalGame.homeScore, let awayScore = historicalGame.awayScore else { return false }
+            if historicalGame.homeTeam.abbreviation == leftTeam {
                 return homeScore > awayScore
-            } else {
+            } else if historicalGame.awayTeam.abbreviation == leftTeam {
                 return awayScore > homeScore
             }
+            return false
         }.count
 
-        let awayWins = historicalGames.filter { game in
-            guard let homeScore = game.homeScore, let awayScore = game.awayScore else { return false }
-            if game.awayTeam.abbreviation == self.game.awayTeam.abbreviation {
-                return homeScore < awayScore
-            } else {
-                return awayScore < homeScore
+        let rightTeamWins = historicalGames.filter { historicalGame in
+            guard let homeScore = historicalGame.homeScore, let awayScore = historicalGame.awayScore else { return false }
+            if historicalGame.homeTeam.abbreviation == rightTeam {
+                return homeScore > awayScore
+            } else if historicalGame.awayTeam.abbreviation == rightTeam {
+                return awayScore > homeScore
             }
+            return false
         }.count
 
         return HStack(spacing: 20) {
             VStack {
-                TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 40)
-                Text("\(homeWins)")
+                TeamIconView(teamAbbreviation: leftTeam, size: 40)
+                Text("\(leftTeamWins)")
                     .font(.title2)
                     .fontWeight(.bold)
                 Text("wins")
@@ -403,8 +409,8 @@ struct GameDetailView: View {
                 .foregroundColor(.secondary)
 
             VStack {
-                TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 40)
-                Text("\(awayWins)")
+                TeamIconView(teamAbbreviation: rightTeam, size: 40)
+                Text("\(rightTeamWins)")
                     .font(.title2)
                     .fontWeight(.bold)
                 Text("wins")
@@ -810,22 +816,31 @@ struct HistoricalGameRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
+                // Away team (with @ indicator)
                 HStack(spacing: 8) {
-                    TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 20)
-                    Text(game.homeTeam.abbreviation)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                    Text("\(game.homeScore ?? 0)")
-                        .font(.caption)
+                    Text("@")
+                        .font(.caption2)
                         .foregroundColor(.secondary)
-                }
-
-                HStack(spacing: 8) {
+                        .fontWeight(.semibold)
                     TeamIconView(teamAbbreviation: game.awayTeam.abbreviation, size: 20)
                     Text(game.awayTeam.abbreviation)
                         .font(.caption)
                         .fontWeight(.semibold)
                     Text("\(game.awayScore ?? 0)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                // Home team (with house indicator)
+                HStack(spacing: 8) {
+                    Image(systemName: "house.fill")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    TeamIconView(teamAbbreviation: game.homeTeam.abbreviation, size: 20)
+                    Text(game.homeTeam.abbreviation)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Text("\(game.homeScore ?? 0)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -840,7 +855,7 @@ struct HistoricalGameRow: View {
                     .foregroundColor(result.hasPrefix("W") ? .green : .red)
 
                 if let season = game.season, let week = game.week {
-                    Text("\(season) Wk \(week)")
+                    Text("\(String(season)) Wk \(week)")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -910,6 +925,7 @@ struct UpcomingGameCard: View {
 // NewsCardView for displaying news articles
 struct NewsCardView: View {
     let article: ArticleDTO
+    @State private var isPressed = false
 
     var body: some View {
         Group {
@@ -917,7 +933,6 @@ struct NewsCardView: View {
                 Link(destination: url) {
                     newsContent
                 }
-                .buttonStyle(PlainButtonStyle())
             } else {
                 newsContent
             }
@@ -925,44 +940,52 @@ struct NewsCardView: View {
     }
 
     private var newsContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(article.title)
-                .font(.headline)
-                .lineLimit(2)
-                .foregroundColor(.primary)
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(article.title)
+                    .font(.headline)
+                    .lineLimit(2)
+                    .foregroundColor(.primary)
 
-            if !article.content.isEmpty {
-                Text(article.content)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(3)
+                if !article.content.isEmpty {
+                    Text(article.content)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                }
+
+                HStack {
+                    Text(article.source)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Text("•")
+                        .foregroundColor(.secondary)
+
+                    Text(article.publishedDate, style: .date)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
-            HStack {
-                Text(article.source)
+            Spacer()
+
+            // Chevron indicator for clickable articles
+            if article.url != nil {
+                Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text("•")
-                    .foregroundColor(.secondary)
-
-                Text(article.publishedDate, style: .date)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                if article.url != nil {
-                    Image(systemName: "arrow.up.right.square")
-                        .font(.caption)
-                        .foregroundColor(.accentColor)
-                }
+                    .foregroundColor(.accentColor)
+                    .fontWeight(.semibold)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(article.url != nil ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
     }
 }
 

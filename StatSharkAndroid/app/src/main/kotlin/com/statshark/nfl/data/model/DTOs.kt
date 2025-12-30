@@ -1,7 +1,6 @@
 package com.statshark.nfl.data.model
 
 import com.google.gson.annotations.SerializedName
-import java.util.Date
 
 /**
  * Team Data Transfer Object
@@ -10,7 +9,7 @@ import java.util.Date
 data class TeamDTO(
     val name: String,
     val abbreviation: String,
-    val conference: String,
+    val conference: String?,
     val division: String,
     val city: String? = null,
     val primaryColor: String? = null,
@@ -31,9 +30,9 @@ data class GameDTO(
     val homeScore: Int? = null,
     @SerializedName("away_score")
     val awayScore: Int? = null,
-    val date: Date,
+    val date: String,
     @SerializedName("scheduled_date")
-    val scheduledDate: Date,
+    val scheduledDate: String,
     val week: Int,
     val season: Int,
     val status: String? = null,
@@ -172,7 +171,7 @@ data class ArticleDTO(
     val content: String,
     val source: String,
     val url: String,
-    val date: Date,
+    val date: String,
     @SerializedName("related_teams")
     val relatedTeams: List<String>
 )
@@ -187,7 +186,7 @@ data class CurrentWeekResponse(
     val currentSeason: Int,
     val games: List<GameDTO>,
     @SerializedName("as_of_date")
-    val asOfDate: Date
+    val asOfDate: String
 )
 
 /**

@@ -1,10 +1,19 @@
 package com.statshark.nfl.di
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.statshark.nfl.BuildConfig
+import com.statshark.nfl.api.StatSharkApiService
 import com.statshark.nfl.data.repository.NFLRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 /**
@@ -17,7 +26,50 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideNFLRepository(): NFLRepository {
-        return NFLRepository()
+    fun provideGson(): Gson {
+        return GsonBuilder()
+            .setDateFormat("yyyy-MM-dd'T'HH:mm:ss")
+            .create()
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
+        }
+
+        return OkHttpClient.Builder()
+            .connectTimeout(90, TimeUnit.SECONDS)
+            .readTimeout(90, TimeUnit.SECONDS)
+            .writeTimeout(90, TimeUnit.SECONDS)
+            .addInterceptor(loggingInterceptor)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(gson: Gson, okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(BuildConfig.API_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideStatSharkApiService(retrofit: Retrofit): StatSharkApiService {
+        return retrofit.create(StatSharkApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNFLRepository(apiService: StatSharkApiService): NFLRepository {
+        return NFLRepository(apiService)
     }
 }

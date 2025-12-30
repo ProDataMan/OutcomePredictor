@@ -1,7 +1,8 @@
 package com.statshark.nfl.data.repository
 
-import com.statshark.nfl.api.ApiClient
+import com.statshark.nfl.api.StatSharkApiService
 import com.statshark.nfl.data.model.*
+import com.statshark.nfl.ui.theme.TeamColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -12,9 +13,7 @@ import javax.inject.Singleton
  * Handles data operations and caching
  */
 @Singleton
-class NFLRepository @Inject constructor() {
-
-    private val apiService = ApiClient.apiService
+class NFLRepository @Inject constructor(private val apiService: StatSharkApiService) {
 
     // In-memory cache
     private var cachedTeams: List<TeamDTO>? = null
@@ -35,9 +34,12 @@ class NFLRepository @Inject constructor() {
 
                 // Fetch from API
                 val teams = apiService.getTeams()
-                cachedTeams = teams
+                val teamsWithConference = teams.map {
+                    it.copy(conference = TeamColors.getConference(it.abbreviation))
+                }
+                cachedTeams = teamsWithConference
                 cacheTimestamp = now
-                Result.success(teams)
+                Result.success(teamsWithConference)
             } catch (e: Exception) {
                 Result.failure(e)
             }

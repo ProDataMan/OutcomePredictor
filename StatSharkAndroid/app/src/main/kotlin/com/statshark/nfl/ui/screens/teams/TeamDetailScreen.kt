@@ -1,7 +1,5 @@
 package com.statshark.nfl.ui.screens.teams
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,11 +18,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -33,11 +31,9 @@ import com.statshark.nfl.data.cache.PlayerCache
 import com.statshark.nfl.data.model.ArticleDTO
 import com.statshark.nfl.data.model.GameDTO
 import com.statshark.nfl.data.model.PlayerDTO
-import com.statshark.nfl.data.model.PlayerStatsDTO
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
-import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
 
 /**
  * Team Detail Screen
@@ -125,12 +121,10 @@ fun TeamDetailScreen(
                         isLoading = uiState.isLoadingRoster,
                         error = uiState.rosterError,
                         onRetry = { viewModel.retry() },
-                        onPlayerClick = { playerId ->
+                        onPlayerClick = { player ->
                             // Store player in cache and navigate
-                            uiState.players.find { it.id == playerId }?.let { player ->
-                                PlayerCache.put(player)
-                                navController.navigate(Screen.PlayerDetail.createRoute(playerId, team.abbreviation))
-                            }
+                            PlayerCache.put(player)
+                            navController.navigate(Screen.PlayerDetail.createRoute(player.id, team.abbreviation))
                         }
                     )
                     1 -> GamesTab(
@@ -138,7 +132,12 @@ fun TeamDetailScreen(
                         teamAbbreviation = team.abbreviation,
                         isLoading = uiState.isLoadingGames,
                         error = uiState.gamesError,
-                        onRetry = { viewModel.retry() }
+                        onRetry = { viewModel.retry() },
+                        onGameClick = { game ->
+                            // Store game in cache and navigate
+                            com.statshark.nfl.data.cache.GameCache.put(game)
+                            navController.navigate(Screen.GameDetail.createRoute(game.id))
+                        }
                     )
                     2 -> NewsTab(
                         news = uiState.news,
@@ -236,7 +235,7 @@ fun RosterTab(
     isLoading: Boolean,
     error: String?,
     onRetry: () -> Unit,
-    onPlayerClick: (String) -> Unit
+    onPlayerClick: (PlayerDTO) -> Unit
 ) {
     when {
         isLoading -> LoadingScreen()
@@ -263,14 +262,15 @@ fun RosterTab(
                                 text = getPositionGroupName(positionGroup),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
                         }
 
                         items(positionPlayers) { player ->
                             PlayerCard(
                                 player = player,
-                                onClick = { onPlayerClick(player.id) }
+                                onClick = { onPlayerClick(player) }
                             )
                         }
                     }
@@ -349,116 +349,26 @@ fun PlayerCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "${player.jerseyNumber ?: "—"}",
+                        text = player.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = player.name,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = player.position,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (player.height != null && player.weight != null) {
+                    player.jerseyNumber?.let {
                         Text(
-                            text = "•",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "${player.height} • ${player.weight}lbs",
+                            text = "#$it",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                if (player.college != null) {
-                    Text(
-                        text = player.college,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Stats preview
-            player.stats?.let { stats ->
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
-                    when (player.position.first()) {
-                        'Q' -> {
-                            stats.passingYards?.let {
-                                Text(
-                                    text = "${it} YDS",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            stats.passingTouchdowns?.let {
-                                Text(
-                                    text = "${it} TD",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                        'R' -> {
-                            stats.rushingYards?.let {
-                                Text(
-                                    text = "${it} YDS",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            stats.rushingTouchdowns?.let {
-                                Text(
-                                    text = "${it} TD",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                        'W', 'T' -> {
-                            stats.receivingYards?.let {
-                                Text(
-                                    text = "${it} YDS",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            stats.receptions?.let {
-                                Text(
-                                    text = "${it} REC",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                        'D', 'L', 'S', 'C' -> {
-                            stats.tackles?.let {
-                                Text(
-                                    text = "${it} TKL",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            stats.sacks?.let {
-                                Text(
-                                    text = "${it} SCK",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                    }
-                }
+                Text(
+                    text = player.position,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -473,7 +383,8 @@ fun GamesTab(
     teamAbbreviation: String,
     isLoading: Boolean,
     error: String?,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onGameClick: (GameDTO) -> Unit
 ) {
     when {
         isLoading -> LoadingScreen()
@@ -486,101 +397,54 @@ fun GamesTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(games) { game ->
-                    GameCard(game, teamAbbreviation)
+                    GameCard(
+                        game = game,
+                        perspective = teamAbbreviation,
+                        onClick = { onGameClick(game) }
+                    )
                 }
             }
         }
     }
 }
 
-/**
- * Game Card
- */
 @Composable
-fun GameCard(game: GameDTO, viewingTeam: String) {
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.US) }
-    val isHomeGame = game.homeTeam.abbreviation == viewingTeam
-    val opponent = if (isHomeGame) game.awayTeam else game.homeTeam
-    val teamScore = if (isHomeGame) game.homeScore else game.awayScore
-    val opponentScore = if (isHomeGame) game.awayScore else game.homeScore
-
-    val result = if (teamScore != null && opponentScore != null) {
-        when {
-            teamScore > opponentScore -> "W"
-            teamScore < opponentScore -> "L"
-            else -> "T"
-        }
-    } else "—"
-
-    val resultColor = when (result) {
-        "W" -> Color(0xFF4CAF50)
-        "L" -> Color(0xFFF44336)
-        "T" -> Color(0xFFFF9800)
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+fun GameCard(game: GameDTO, perspective: String, onClick: () -> Unit) {
+    val opponent = if (game.homeTeam.abbreviation == perspective) game.awayTeam else game.homeTeam
+    val isHomeGame = game.homeTeam.abbreviation == perspective
+    val gameResult = when {
+        game.homeScore == null || game.awayScore == null -> "TBD"
+        isHomeGame && game.homeScore > game.awayScore -> "W"
+        !isHomeGame && game.awayScore > game.homeScore -> "W"
+        else -> "L"
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Result badge
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(resultColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = result,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(if (isHomeGame) "vs" else "@", style = MaterialTheme.typography.bodyLarge)
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(opponent.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Game info
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${if (isHomeGame) "vs" else "@"} ${opponent.abbreviation}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (teamScore != null && opponentScore != null) {
-                        Text(
-                            text = "$teamScore - $opponentScore",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                Text(
-                    text = dateFormat.format(game.date),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Week ${game.week}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Column(horizontalAlignment = Alignment.End) {
+                Text("$gameResult ${game.homeScore ?: "-"} - ${game.awayScore ?: "-"}", style = MaterialTheme.typography.titleMedium)
+                Text("Week ${game.week}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
+
 
 /**
  * News Tab
@@ -595,7 +459,7 @@ fun NewsTab(
     when {
         isLoading -> LoadingScreen()
         error != null -> ErrorScreen(error, onRetry)
-        news.isEmpty() -> EmptyScreen("No news available")
+        news.isEmpty() -> EmptyScreen("No news found")
         else -> {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -603,7 +467,7 @@ fun NewsTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(news) { article ->
-                    NewsCard(article)
+                    NewsCard(article = article)
                 }
             }
         }
@@ -612,32 +476,18 @@ fun NewsTab(
 
 /**
  * News Card
- * Clickable card that opens article in browser
  */
 @Composable
 fun NewsCard(article: ArticleDTO) {
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.US) }
     val context = LocalContext.current
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                // Open article URL in browser
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(article.url))
-                    context.startActivity(intent)
-                } catch (e: Exception) {
-                    // Silently fail if unable to open browser
-                }
-            },
+            .clickable { /* TODO: Open article in browser */ },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = article.title,
                 style = MaterialTheme.typography.titleMedium,
@@ -650,23 +500,22 @@ fun NewsCard(article: ArticleDTO) {
                 text = article.content,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = article.source,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = dateFormat.format(article.date),
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "- ago", // TODO: Format date
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -675,7 +524,7 @@ fun NewsCard(article: ArticleDTO) {
 }
 
 /**
- * Loading Screen
+ * Generic Loading Screen
  */
 @Composable
 fun LoadingScreen() {
@@ -688,24 +537,19 @@ fun LoadingScreen() {
 }
 
 /**
- * Error Screen
+ * Generic Error Screen
  */
 @Composable
 fun ErrorScreen(error: String, onRetry: () -> Unit) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = error,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Error: $error", color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onRetry) {
                 Text("Retry")
             }
@@ -714,7 +558,7 @@ fun ErrorScreen(error: String, onRetry: () -> Unit) {
 }
 
 /**
- * Empty Screen
+ * Generic Empty Screen
  */
 @Composable
 fun EmptyScreen(message: String) {
@@ -722,10 +566,6 @@ fun EmptyScreen(message: String) {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text(text = message, style = MaterialTheme.typography.bodyLarge)
     }
 }

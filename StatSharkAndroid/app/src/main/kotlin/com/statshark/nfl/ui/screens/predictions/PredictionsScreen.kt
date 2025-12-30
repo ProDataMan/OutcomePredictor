@@ -28,8 +28,6 @@ import com.statshark.nfl.data.model.GameDTO
 import com.statshark.nfl.data.model.PredictionDTO
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
  * Predictions Screen
@@ -52,7 +50,7 @@ fun PredictionsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.TrendingUp,
+                            imageVector = Icons.Filled.TrendingUp,
                             contentDescription = null
                         )
                         Text("AI Predictions")
@@ -125,7 +123,7 @@ fun InfoCard() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.TrendingUp,
+                imageVector = Icons.Filled.TrendingUp,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(40.dp)
@@ -159,8 +157,6 @@ fun GamePredictionCard(
     onPredictClick: () -> Unit,
     navController: NavController
 ) {
-    val dateFormat = remember { SimpleDateFormat("EEE, MMM d 'at' h:mm a", Locale.US) }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -171,7 +167,7 @@ fun GamePredictionCard(
                 .padding(16.dp)
         ) {
             // Game Header
-            GameHeader(game, dateFormat)
+            GameHeader(game)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -208,7 +204,7 @@ fun GamePredictionCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        imageVector = Icons.Default.TrendingUp,
+                        imageVector = Icons.Filled.TrendingUp,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
@@ -246,7 +242,7 @@ fun GamePredictionCard(
  * Game Header
  */
 @Composable
-fun GameHeader(game: GameDTO, dateFormat: SimpleDateFormat) {
+fun GameHeader(game: GameDTO) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,7 +256,7 @@ fun GameHeader(game: GameDTO, dateFormat: SimpleDateFormat) {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = dateFormat.format(game.scheduledDate),
+                text = game.scheduledDate.take(10),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -397,7 +393,7 @@ fun PredictionResult(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Check,
+                imageVector = Icons.Filled.Check,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.size(24.dp)
@@ -446,7 +442,7 @@ fun PredictionResult(
 
         // Confidence
         LinearProgressIndicator(
-            progress = { prediction.confidence.toFloat() },
+            progress = prediction.confidence.toFloat(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
@@ -603,7 +599,7 @@ fun EmptyScreen(message: String) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.TrendingUp,
+                imageVector = Icons.Filled.TrendingUp,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)

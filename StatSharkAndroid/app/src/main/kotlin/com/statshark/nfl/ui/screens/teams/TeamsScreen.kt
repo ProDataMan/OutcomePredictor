@@ -1,5 +1,6 @@
 package com.statshark.nfl.ui.screens.teams
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -88,6 +90,7 @@ fun TeamsScreen(
 /**
  * Conference Filter Row
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConferenceFilterRow(
     selectedFilter: ConferenceFilter,
@@ -176,6 +179,17 @@ fun TeamCard(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(16.dp)
             ) {
+                // Team Helmet Icon
+                val helmetResourceId = getTeamHelmetResource(team.abbreviation)
+                if (helmetResourceId != null) {
+                    Image(
+                        painter = painterResource(id = helmetResourceId),
+                        contentDescription = "${team.name} helmet",
+                        modifier = Modifier.size(80.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
                 // Team Abbreviation (Large)
                 Text(
                     text = team.abbreviation,
@@ -289,5 +303,46 @@ fun EmptyContent() {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/**
+ * Get drawable resource ID for team helmet
+ */
+fun getTeamHelmetResource(abbreviation: String): Int? {
+    return when (abbreviation.uppercase()) {
+        "ARI" -> com.statshark.nfl.R.drawable.team_ari
+        "ATL" -> com.statshark.nfl.R.drawable.team_atl
+        "BAL" -> com.statshark.nfl.R.drawable.team_bal
+        "BUF" -> com.statshark.nfl.R.drawable.team_buf
+        "CAR" -> com.statshark.nfl.R.drawable.team_car
+        "CHI" -> com.statshark.nfl.R.drawable.team_chi
+        "CIN" -> com.statshark.nfl.R.drawable.team_cin
+        "CLE" -> com.statshark.nfl.R.drawable.team_cle
+        "DAL" -> com.statshark.nfl.R.drawable.team_dal
+        "DEN" -> com.statshark.nfl.R.drawable.team_den
+        "DET" -> com.statshark.nfl.R.drawable.team_det
+        "GB" -> com.statshark.nfl.R.drawable.team_gb
+        "HOU" -> com.statshark.nfl.R.drawable.team_hou
+        "IND" -> com.statshark.nfl.R.drawable.team_ind
+        "JAX" -> com.statshark.nfl.R.drawable.team_jax
+        "KC" -> com.statshark.nfl.R.drawable.team_kc
+        "LAC" -> com.statshark.nfl.R.drawable.team_lac
+        "LAR" -> com.statshark.nfl.R.drawable.team_lar
+        "LV" -> com.statshark.nfl.R.drawable.team_lv
+        "MIA" -> com.statshark.nfl.R.drawable.team_mia
+        "MIN" -> com.statshark.nfl.R.drawable.team_min
+        "NE" -> com.statshark.nfl.R.drawable.team_ne
+        "NO" -> com.statshark.nfl.R.drawable.team_no
+        "NYG" -> com.statshark.nfl.R.drawable.team_nyg
+        "NYJ" -> com.statshark.nfl.R.drawable.team_nyj
+        "PHI" -> com.statshark.nfl.R.drawable.team_phi
+        "PIT" -> com.statshark.nfl.R.drawable.team_pit
+        "SEA" -> com.statshark.nfl.R.drawable.team_sea
+        "SF" -> com.statshark.nfl.R.drawable.team_sf
+        "TB" -> com.statshark.nfl.R.drawable.team_tb
+        "TEN" -> com.statshark.nfl.R.drawable.team_ten
+        "WAS" -> com.statshark.nfl.R.drawable.team_was
+        else -> null
     }
 }
