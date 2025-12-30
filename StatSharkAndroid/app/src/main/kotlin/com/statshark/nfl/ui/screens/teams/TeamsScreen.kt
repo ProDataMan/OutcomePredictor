@@ -1,7 +1,6 @@
 package com.statshark.nfl.ui.screens.teams
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -12,18 +11,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.statshark.nfl.data.model.TeamDTO
 import com.statshark.nfl.ui.navigation.Screen
-import com.statshark.nfl.ui.theme.TeamColors
 
 /**
  * Teams Screen
@@ -53,11 +50,11 @@ fun TeamsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Conference Filter Chips
+            // Conference Filter (Segmented Control style - matching iOS)
             ConferenceFilterRow(
                 selectedFilter = uiState.selectedFilter,
                 onFilterSelected = { viewModel.setFilter(it) },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                modifier = Modifier.padding(16.dp)
             )
 
             // Content
@@ -89,29 +86,34 @@ fun TeamsScreen(
 
 /**
  * Conference Filter Row
+ * Matches iOS segmented picker style
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConferenceFilterRow(
     selectedFilter: ConferenceFilter,
     onFilterSelected: (ConferenceFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    val filters = ConferenceFilter.values()
+    val selectedIndex = filters.indexOf(selectedFilter)
+
+    TabRow(
+        selectedTabIndex = selectedIndex,
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.primary
     ) {
-        ConferenceFilter.values().forEach { filter ->
-            FilterChip(
-                selected = selectedFilter == filter,
+        filters.forEachIndexed { index, filter ->
+            Tab(
+                selected = selectedIndex == index,
                 onClick = { onFilterSelected(filter) },
-                label = {
+                text = {
                     Text(
                         text = filter.name,
-                        style = MaterialTheme.typography.labelLarge
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (selectedIndex == index) FontWeight.SemiBold else FontWeight.Normal
                     )
-                },
-                modifier = Modifier.weight(1f)
+                }
             )
         }
     }
@@ -119,6 +121,7 @@ fun ConferenceFilterRow(
 
 /**
  * Teams Grid
+ * Matches iOS LazyVGrid with adaptive sizing
  */
 @Composable
 fun TeamsGrid(
@@ -127,10 +130,10 @@ fun TeamsGrid(
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Adaptive(minSize = 160.dp),
         contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier.fillMaxSize()
     ) {
         items(teams, key = { it.abbreviation }) { team ->
@@ -144,6 +147,7 @@ fun TeamsGrid(
 
 /**
  * Team Card Component
+ * Matches iOS TeamCardView layout
  */
 @Composable
 fun TeamCard(
@@ -151,75 +155,55 @@ fun TeamCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val teamColors = TeamColors.getTeamColors(team.abbreviation)
-
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
+            .height(160.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            teamColors.primary,
-                            teamColors.secondary
-                        )
-                    )
-                ),
-            contentAlignment = Alignment.Center
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(16.dp)
-            ) {
-                // Team Helmet Icon
-                val helmetResourceId = getTeamHelmetResource(team.abbreviation)
-                if (helmetResourceId != null) {
-                    Image(
-                        painter = painterResource(id = helmetResourceId),
-                        contentDescription = "${team.name} helmet",
-                        modifier = Modifier.size(80.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
-                // Team Abbreviation (Large)
-                Text(
-                    text = team.abbreviation,
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.surface,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Team Name
-                Text(
-                    text = team.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                    textAlign = TextAlign.Center,
-                    maxLines = 2
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Division
-                Text(
-                    text = team.division,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center
+            // Team Helmet Icon
+            val helmetResourceId = getTeamHelmetResource(team.abbreviation)
+            if (helmetResourceId != null) {
+                Image(
+                    painter = painterResource(id = helmetResourceId),
+                    contentDescription = "${team.name} helmet",
+                    modifier = Modifier.size(80.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Team Name
+            Text(
+                text = team.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Conference and Division
+            Text(
+                text = "${team.conference} ${team.division}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
