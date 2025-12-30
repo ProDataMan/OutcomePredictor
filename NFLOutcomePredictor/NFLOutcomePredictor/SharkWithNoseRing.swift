@@ -5,13 +5,14 @@ import AVKit
 struct SharkWithNoseRing: View {
     let size: CGFloat
     @State private var player: AVPlayer?
-    @State private var loopObserver: NSObjectProtocol?
 
     var body: some View {
         ZStack {
             if let player = player {
                 // Video player for Bull Shark animation
+                // Use 9:16 aspect ratio to crop black side margins
                 VideoPlayer(player: player)
+                    .aspectRatio(9/16, contentMode: .fill)
                     .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .onAppear {
@@ -27,6 +28,7 @@ struct SharkWithNoseRing: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
         .onAppear {
@@ -43,24 +45,13 @@ struct SharkWithNoseRing: View {
         let playerItem = AVPlayerItem(url: videoURL)
         let newPlayer = AVPlayer(playerItem: playerItem)
 
-        // Loop the video
-        loopObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: playerItem,
-            queue: .main
-        ) { _ in
-            newPlayer.seek(to: .zero)
-            newPlayer.play()
-        }
+        // Play once without looping
+        // Removed: loopObserver for repeating video
 
         player = newPlayer
     }
 
     private func cleanupPlayer() {
-        if let observer = loopObserver {
-            NotificationCenter.default.removeObserver(observer)
-            loopObserver = nil
-        }
         player = nil
     }
 }

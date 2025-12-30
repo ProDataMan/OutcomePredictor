@@ -74,28 +74,25 @@ struct PlayerDetailView: View {
                 .padding(.top, 24)
 
                 // Stats section
-                if let stats = player.stats {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Season Stats")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .padding(.horizontal)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Season Stats")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
 
+                    if let stats = player.stats {
                         StatsGrid(player: player, stats: stats)
                             .padding(.horizontal)
-                    }
-                } else {
-                    VStack(spacing: 12) {
-                        Image(systemName: "chart.bar.xaxis")
-                            .font(.system(size: 50))
-                            .foregroundColor(.secondary)
+                    } else {
+                        // Show zeros when stats are not available
+                        StatsGrid(player: player, stats: PlayerStatsDTO())
+                            .padding(.horizontal)
 
-                        Text("No stats available")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
+                        Text("⚠️ Stats not available - showing zeros")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .padding(.horizontal)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
                 }
 
                 // Fantasy button (if enabled)
@@ -189,46 +186,30 @@ struct StatsGrid: View {
 
     var quarterbackStats: some View {
         VStack(spacing: 16) {
-            // Passing stats
-            if hasPassingStats {
-                StatCategorySection(title: "Passing") {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        if let yards = stats.passingYards {
-                            StatCard(label: "Passing Yards", value: "\(yards)")
-                        }
-                        if let tds = stats.passingTouchdowns {
-                            StatCard(label: "Touchdowns", value: "\(tds)")
-                        }
-                        if let ints = stats.passingInterceptions {
-                            StatCard(label: "Interceptions", value: "\(ints)")
-                        }
-                        if let comp = stats.passingCompletions, let att = stats.passingAttempts {
-                            StatCard(label: "Completion %", value: String(format: "%.1f%%", Double(comp) / Double(att) * 100))
-                        }
-                        if let comp = stats.passingCompletions {
-                            StatCard(label: "Completions", value: "\(comp)")
-                        }
-                        if let att = stats.passingAttempts {
-                            StatCard(label: "Attempts", value: "\(att)")
-                        }
+            // Passing stats - always show
+            StatCategorySection(title: "Passing") {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    StatCard(label: "Passing Yards", value: "\(stats.passingYards ?? 0)")
+                    StatCard(label: "Touchdowns", value: "\(stats.passingTouchdowns ?? 0)")
+                    StatCard(label: "Interceptions", value: "\(stats.passingInterceptions ?? 0)")
+
+                    if let comp = stats.passingCompletions, let att = stats.passingAttempts, att > 0 {
+                        StatCard(label: "Completion %", value: String(format: "%.1f%%", Double(comp) / Double(att) * 100))
+                    } else {
+                        StatCard(label: "Completion %", value: "0.0%")
                     }
+
+                    StatCard(label: "Completions", value: "\(stats.passingCompletions ?? 0)")
+                    StatCard(label: "Attempts", value: "\(stats.passingAttempts ?? 0)")
                 }
             }
 
-            // Rushing stats if available
-            if hasRushingStats {
-                StatCategorySection(title: "Rushing") {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        if let yards = stats.rushingYards {
-                            StatCard(label: "Rushing Yards", value: "\(yards)")
-                        }
-                        if let tds = stats.rushingTouchdowns {
-                            StatCard(label: "Touchdowns", value: "\(tds)")
-                        }
-                        if let att = stats.rushingAttempts {
-                            StatCard(label: "Attempts", value: "\(att)")
-                        }
-                    }
+            // Rushing stats - always show
+            StatCategorySection(title: "Rushing") {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    StatCard(label: "Rushing Yards", value: "\(stats.rushingYards ?? 0)")
+                    StatCard(label: "Touchdowns", value: "\(stats.rushingTouchdowns ?? 0)")
+                    StatCard(label: "Attempts", value: "\(stats.rushingAttempts ?? 0)")
                 }
             }
         }
@@ -236,43 +217,28 @@ struct StatsGrid: View {
 
     var runningBackStats: some View {
         VStack(spacing: 16) {
-            // Rushing stats
-            if hasRushingStats {
-                StatCategorySection(title: "Rushing") {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        if let yards = stats.rushingYards {
-                            StatCard(label: "Rushing Yards", value: "\(yards)")
-                        }
-                        if let tds = stats.rushingTouchdowns {
-                            StatCard(label: "Touchdowns", value: "\(tds)")
-                        }
-                        if let att = stats.rushingAttempts {
-                            StatCard(label: "Attempts", value: "\(att)")
-                        }
-                        if let yards = stats.rushingYards, let att = stats.rushingAttempts, att > 0 {
-                            StatCard(label: "Yards/Attempt", value: String(format: "%.1f", Double(yards) / Double(att)))
-                        }
+            // Rushing stats - always show
+            StatCategorySection(title: "Rushing") {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    StatCard(label: "Rushing Yards", value: "\(stats.rushingYards ?? 0)")
+                    StatCard(label: "Touchdowns", value: "\(stats.rushingTouchdowns ?? 0)")
+                    StatCard(label: "Attempts", value: "\(stats.rushingAttempts ?? 0)")
+
+                    if let yards = stats.rushingYards, let att = stats.rushingAttempts, att > 0 {
+                        StatCard(label: "Yards/Attempt", value: String(format: "%.1f", Double(yards) / Double(att)))
+                    } else {
+                        StatCard(label: "Yards/Attempt", value: "0.0")
                     }
                 }
             }
 
-            // Receiving stats if available
-            if hasReceivingStats {
-                StatCategorySection(title: "Receiving") {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        if let yards = stats.receivingYards {
-                            StatCard(label: "Receiving Yards", value: "\(yards)")
-                        }
-                        if let tds = stats.receivingTouchdowns {
-                            StatCard(label: "Touchdowns", value: "\(tds)")
-                        }
-                        if let rec = stats.receptions {
-                            StatCard(label: "Receptions", value: "\(rec)")
-                        }
-                        if let targets = stats.targets {
-                            StatCard(label: "Targets", value: "\(targets)")
-                        }
-                    }
+            // Receiving stats - always show
+            StatCategorySection(title: "Receiving") {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    StatCard(label: "Receiving Yards", value: "\(stats.receivingYards ?? 0)")
+                    StatCard(label: "Touchdowns", value: "\(stats.receivingTouchdowns ?? 0)")
+                    StatCard(label: "Receptions", value: "\(stats.receptions ?? 0)")
+                    StatCard(label: "Targets", value: "\(stats.targets ?? 0)")
                 }
             }
         }
@@ -280,27 +246,24 @@ struct StatsGrid: View {
 
     var receiverStats: some View {
         VStack(spacing: 16) {
-            if hasReceivingStats {
-                StatCategorySection(title: "Receiving") {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        if let yards = stats.receivingYards {
-                            StatCard(label: "Receiving Yards", value: "\(yards)")
-                        }
-                        if let tds = stats.receivingTouchdowns {
-                            StatCard(label: "Touchdowns", value: "\(tds)")
-                        }
-                        if let rec = stats.receptions {
-                            StatCard(label: "Receptions", value: "\(rec)")
-                        }
-                        if let targets = stats.targets {
-                            StatCard(label: "Targets", value: "\(targets)")
-                        }
-                        if let rec = stats.receptions, let targets = stats.targets, targets > 0 {
-                            StatCard(label: "Catch %", value: String(format: "%.1f%%", Double(rec) / Double(targets) * 100))
-                        }
-                        if let yards = stats.receivingYards, let rec = stats.receptions, rec > 0 {
-                            StatCard(label: "Yards/Catch", value: String(format: "%.1f", Double(yards) / Double(rec)))
-                        }
+            // Receiving stats - always show
+            StatCategorySection(title: "Receiving") {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    StatCard(label: "Receiving Yards", value: "\(stats.receivingYards ?? 0)")
+                    StatCard(label: "Touchdowns", value: "\(stats.receivingTouchdowns ?? 0)")
+                    StatCard(label: "Receptions", value: "\(stats.receptions ?? 0)")
+                    StatCard(label: "Targets", value: "\(stats.targets ?? 0)")
+
+                    if let rec = stats.receptions, let targets = stats.targets, targets > 0 {
+                        StatCard(label: "Catch %", value: String(format: "%.1f%%", Double(rec) / Double(targets) * 100))
+                    } else {
+                        StatCard(label: "Catch %", value: "0.0%")
+                    }
+
+                    if let yards = stats.receivingYards, let rec = stats.receptions, rec > 0 {
+                        StatCard(label: "Yards/Catch", value: String(format: "%.1f", Double(yards) / Double(rec)))
+                    } else {
+                        StatCard(label: "Yards/Catch", value: "0.0")
                     }
                 }
             }
@@ -309,19 +272,11 @@ struct StatsGrid: View {
 
     var defensiveStats: some View {
         VStack(spacing: 16) {
-            if hasDefensiveStats {
-                StatCategorySection(title: "Defense") {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        if let tackles = stats.tackles {
-                            StatCard(label: "Tackles", value: "\(tackles)")
-                        }
-                        if let sacks = stats.sacks {
-                            StatCard(label: "Sacks", value: String(format: "%.1f", sacks))
-                        }
-                        if let ints = stats.interceptions {
-                            StatCard(label: "Interceptions", value: "\(ints)")
-                        }
-                    }
+            StatCategorySection(title: "Defense") {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    StatCard(label: "Tackles", value: "\(stats.tackles ?? 0)")
+                    StatCard(label: "Sacks", value: String(format: "%.1f", stats.sacks ?? 0.0))
+                    StatCard(label: "Interceptions", value: "\(stats.interceptions ?? 0)")
                 }
             }
         }

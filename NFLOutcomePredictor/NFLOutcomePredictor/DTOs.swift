@@ -88,10 +88,11 @@ public struct GameDTO: Codable, Sendable {
     public let quarter: String?
     public let timeRemaining: String?
 
-    // Custom mapping for scheduled_date -> date
+    // Special case CodingKeys: API sends "scheduled_date" but we want property named "date"
+    // Also need to list other fields because when you define CodingKeys, you must include all fields
     enum CodingKeys: String, CodingKey {
-        case id, homeTeam, awayTeam, week, season, homeScore, awayScore, status, quarter, timeRemaining
-        case date = "scheduledDate"  // Maps to scheduled_date via snake_case conversion
+        case id, week, season, status, quarter, homeTeam, awayTeam, homeScore, awayScore, timeRemaining
+        case date = "scheduledDate"  // convertFromSnakeCase gives us scheduledDate
     }
 
     public init(
@@ -247,8 +248,6 @@ public struct PredictionDTO: Codable, Sendable {
     public let reasoning: String
     public let vegasOdds: VegasOddsDTO?
 
-    // Note: APIClient uses .convertFromSnakeCase for automatic mapping
-
     public init(
         gameId: String,
         homeTeam: TeamDTO,
@@ -293,8 +292,6 @@ public struct VegasOddsDTO: Codable, Sendable {
     public let homeImpliedProbability: Double?
     public let awayImpliedProbability: Double?
     public let bookmaker: String
-
-    // Note: APIClient uses .convertFromSnakeCase for automatic mapping
 
     public init(
         homeMoneyline: Int?,
@@ -400,6 +397,18 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
     public let jerseyNumber: String?
     public let photoURL: String?
     public let stats: PlayerStatsDTO?
+    public let height: String?
+    public let weight: Int?
+    public let age: Int?
+    public let college: String?
+    public let experience: Int?
+
+    // Special case: photoURL needs explicit mapping because convertFromSnakeCase
+    // converts photo_url → photoUrl (lowercase), but Swift convention is photoURL (uppercase)
+    enum CodingKeys: String, CodingKey {
+        case id, name, position, jerseyNumber, stats, height, weight, age, college, experience
+        case photoURL = "photoUrl"  // convertFromSnakeCase gives us photoUrl, not photoURL
+    }
 
     public init(
         id: String,
@@ -407,7 +416,12 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
         position: String,
         jerseyNumber: String? = nil,
         photoURL: String? = nil,
-        stats: PlayerStatsDTO? = nil
+        stats: PlayerStatsDTO? = nil,
+        height: String? = nil,
+        weight: Int? = nil,
+        age: Int? = nil,
+        college: String? = nil,
+        experience: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -415,6 +429,11 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
         self.jerseyNumber = jerseyNumber
         self.photoURL = photoURL
         self.stats = stats
+        self.height = height
+        self.weight = weight
+        self.age = age
+        self.college = college
+        self.experience = experience
     }
 }
 
