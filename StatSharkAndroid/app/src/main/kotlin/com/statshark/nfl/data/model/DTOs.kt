@@ -1,11 +1,13 @@
 package com.statshark.nfl.data.model
 
 import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.Serializable
 
 /**
  * Team Data Transfer Object
  * Represents an NFL team with basic information
  */
+@Serializable
 data class TeamDTO(
     val name: String,
     val abbreviation: String,
@@ -20,6 +22,7 @@ data class TeamDTO(
  * Game Data Transfer Object
  * Represents an NFL game with complete information
  */
+@Serializable
 data class GameDTO(
     val id: String,
     @SerializedName("home_team")
@@ -43,6 +46,7 @@ data class GameDTO(
  * Player Data Transfer Object
  * Represents a player with stats
  */
+@Serializable
 data class PlayerDTO(
     val id: String,
     val name: String,
@@ -62,6 +66,7 @@ data class PlayerDTO(
 /**
  * Player Stats Data Transfer Object
  */
+@Serializable
 data class PlayerStatsDTO(
     // Passing stats
     @SerializedName("passing_yards")
@@ -118,6 +123,7 @@ data class PlayerStatsDTO(
 /**
  * Team Roster Data Transfer Object
  */
+@Serializable
 data class TeamRosterDTO(
     val team: TeamDTO,
     val players: List<PlayerDTO>,
@@ -127,6 +133,7 @@ data class TeamRosterDTO(
 /**
  * Prediction Data Transfer Object
  */
+@Serializable
 data class PredictionDTO(
     @SerializedName("home_team")
     val homeTeam: String,
@@ -147,6 +154,7 @@ data class PredictionDTO(
 /**
  * Vegas Odds Data Transfer Object
  */
+@Serializable
 data class VegasOddsDTO(
     @SerializedName("home_moneyline")
     val homeMoneyline: Int? = null,
@@ -165,6 +173,7 @@ data class VegasOddsDTO(
  * Article Data Transfer Object
  * Represents a news article
  */
+@Serializable
 data class ArticleDTO(
     val id: String,
     val title: String,
@@ -179,6 +188,7 @@ data class ArticleDTO(
 /**
  * Current Week Response
  */
+@Serializable
 data class CurrentWeekResponse(
     @SerializedName("current_week")
     val currentWeek: Int,
@@ -193,6 +203,7 @@ data class CurrentWeekResponse(
  * Prediction Result
  * Simplified prediction model for UI display
  */
+@Serializable
 data class PredictionResult(
     val predictedWinner: String,
     val confidence: Double,

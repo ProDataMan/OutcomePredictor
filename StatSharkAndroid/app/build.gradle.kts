@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,9 +9,25 @@ plugins {
     kotlin("plugin.serialization") version "1.9.22"
 }
 
+// Load properties from gradle.properties
+val properties = Properties()
+val propertiesFile = project.rootProject.file("gradle.properties")
+if (propertiesFile.exists()) {
+    properties.load(FileInputStream(propertiesFile))
+}
+
 android {
     namespace = "com.statshark.nfl"
     compileSdk = 34
+
+    signingConfigs {
+        create("release") {
+            keyAlias = properties.getProperty("STATSHARK_RELEASE_KEY_ALIAS")
+            keyPassword = properties.getProperty("STATSHARK_RELEASE_KEY_PASSWORD")
+            storeFile = file("statshark-release-key.jks")
+            storePassword = properties.getProperty("STATSHARK_RELEASE_STORE_PASSWORD")
+        }
+    }
 
     defaultConfig {
         applicationId = "com.statshark.nfl"
@@ -32,6 +51,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

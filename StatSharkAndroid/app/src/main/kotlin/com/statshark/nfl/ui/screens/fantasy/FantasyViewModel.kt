@@ -3,6 +3,7 @@ package com.statshark.nfl.ui.screens.fantasy
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.statshark.nfl.data.manager.FantasyTeamManager
+import com.statshark.nfl.data.model.FantasyPlayer
 import com.statshark.nfl.data.model.FantasyRoster
 import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.data.model.TeamDTO
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 /**
@@ -57,32 +59,37 @@ class FantasyViewModel @Inject constructor(
     private fun loadTeams() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingTeams = true)
-            try {
-                val teamsList = repository.getTeams()
-                _teams.value = teamsList
-                _uiState.value = _uiState.value.copy(isLoadingTeams = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoadingTeams = false,
-                    error = "Failed to load teams: ${e.message}"
-                )
-            }
+            repository.getTeams().fold(
+                onSuccess = {
+                    _teams.value = it
+                    _uiState.value = _uiState.value.copy(isLoadingTeams = false)
+                },
+                onFailure = {
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingTeams = false,
+                        error = "Failed to load teams: ${it.message}"
+                    )
+                }
+            )
         }
     }
 
     fun loadTeamRoster(teamAbbreviation: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingRoster = true, rosterError = null)
-            try {
-                val roster = repository.getTeamRoster(teamAbbreviation)
-                _teamRoster.value = roster
-                _uiState.value = _uiState.value.copy(isLoadingRoster = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoadingRoster = false,
-                    rosterError = "Failed to load roster: ${e.message}"
-                )
-            }
+            val season = Calendar.getInstance().get(Calendar.YEAR)
+            repository.getTeamRoster(teamAbbreviation, season).fold(
+                onSuccess = {
+                    _teamRoster.value = it
+                    _uiState.value = _uiState.value.copy(isLoadingRoster = false)
+                },
+                onFailure = {
+                    _uiState.value = _uiState.value.copy(
+                        isLoadingRoster = false,
+                        rosterError = "Failed to load roster: ${it.message}"
+                    )
+                }
+            )
         }
     }
 
@@ -92,18 +99,18 @@ class FantasyViewModel @Inject constructor(
             _allPositionPlayers.value = emptyList()
 
             val allPlayers = mutableListOf<Pair<PlayerDTO, TeamDTO>>()
+            val season = Calendar.getInstance().get(Calendar.YEAR)
 
             for (team in _teams.value) {
-                try {
-                    val roster = repository.getTeamRoster(team.abbreviation)
-                    val positionPlayers = roster.players.filter { it.position == position }
-                    positionPlayers.forEach { player ->
-                        allPlayers.add(Pair(player, team))
-                    }
-                } catch (e: Exception) {
-                    // Continue with other teams if one fails
-                    continue
-                }
+                repository.getTeamRoster(team.abbreviation, season).fold(
+                    onSuccess = { roster ->
+                        val positionPlayers = roster.players.filter { it.position == position }
+                        positionPlayers.forEach { player ->
+                            allPlayers.add(Pair(player, team))
+                        }
+                    },
+                    onFailure = { /* Continue with other teams if one fails */ }
+                )
             }
 
             // Sort by stats
@@ -123,7 +130,7 @@ class FantasyViewModel @Inject constructor(
         return fantasyManager.addPlayer(player, team)
     }
 
-    fun removePlayer(player: com.statshark.nfl.data.model.FantasyPlayer) {
+    fun removePlayer(player: FantasyPlayer) {
         fantasyManager.removePlayer(player)
     }
 

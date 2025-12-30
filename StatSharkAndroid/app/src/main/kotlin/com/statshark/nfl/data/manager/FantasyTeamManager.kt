@@ -2,7 +2,6 @@ package com.statshark.nfl.data.manager
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.compose.runtime.mutableStateOf
 import com.statshark.nfl.data.model.FantasyPlayer
 import com.statshark.nfl.data.model.FantasyRoster
 import com.statshark.nfl.data.model.PlayerDTO

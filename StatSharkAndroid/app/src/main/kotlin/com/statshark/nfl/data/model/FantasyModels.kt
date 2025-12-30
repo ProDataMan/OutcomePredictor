@@ -1,12 +1,14 @@
 package com.statshark.nfl.data.model
 
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /**
  * Fantasy Player representation
  * Mirrors iOS FantasyPlayer model
  */
+@Serializable
 data class FantasyPlayer(
     val id: String,
     val name: String,
@@ -74,6 +76,7 @@ data class FantasyPlayer(
  * Fantasy Team Roster
  * Mirrors iOS FantasyRoster model
  */
+@Serializable
 data class FantasyRoster(
     val quarterbacks: MutableList<FantasyPlayer> = mutableListOf(),
     val runningBacks: MutableList<FantasyPlayer> = mutableListOf(),
@@ -89,6 +92,14 @@ data class FantasyRoster(
         const val MAX_TES = 2
         const val MAX_KS = 1
         const val MAX_DEF = 1
+
+        fun fromJson(json: String): FantasyRoster? {
+            return try {
+                Json.decodeFromString<FantasyRoster>(json)
+            } catch (e: Exception) {
+                null
+            }
+        }
     }
 
     val allPlayers: List<FantasyPlayer>
@@ -107,16 +118,6 @@ data class FantasyRoster(
         get() = allPlayers.sumOf { it.projectedPoints }
 
     fun toJson(): String {
-        return Gson().toJson(this)
-    }
-
-    companion object {
-        fun fromJson(json: String): FantasyRoster? {
-            return try {
-                Gson().fromJson(json, FantasyRoster::class.java)
-            } catch (e: Exception) {
-                null
-            }
-        }
+        return Json.encodeToString(this)
     }
 }
