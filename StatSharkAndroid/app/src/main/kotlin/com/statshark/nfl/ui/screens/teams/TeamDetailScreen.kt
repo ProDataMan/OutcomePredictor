@@ -1,5 +1,8 @@
 package com.statshark.nfl.ui.screens.teams
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -62,7 +65,7 @@ fun TeamDetailScreen(
                         )
                         if (team != null) {
                             Text(
-                                text = "${team.city} • ${team.conference} ${team.division}",
+                                text = listOfNotNull(team.city, team.conference, team.division).joinToString(" • "),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.8f)
                             )
@@ -99,6 +102,48 @@ fun TeamDetailScreen(
                     onSeasonChange = { viewModel.changeSeason(it) }
                 )
 
+                // Next Game Card
+                if (uiState.games.isNotEmpty()) {
+                    val upcomingGame = uiState.games.firstOrNull { game ->
+                        game.homeScore == null && game.awayScore == null
+                    }
+                    upcomingGame?.let { game ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .clickable {
+                                    navController.navigate(Screen.GameDetail.createRoute(game.id))
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "NEXT GAME",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val opponent = if (game.homeTeam.abbreviation == team.abbreviation) game.awayTeam else game.homeTeam
+                                val isHome = game.homeTeam.abbreviation == team.abbreviation
+                                Text(
+                                    text = "${if (isHome) "vs" else "@"} ${opponent.name}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Week ${game.week} • ${game.date}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Tabs
                 TabRow(
                     selectedTabIndex = selectedTab,
@@ -130,7 +175,10 @@ fun TeamDetailScreen(
                         teamAbbreviation = team.abbreviation,
                         isLoading = uiState.isLoadingGames,
                         error = uiState.gamesError,
-                        onRetry = { viewModel.retry() }
+                        onRetry = { viewModel.retry() },
+                        onGameClick = { game ->
+                            navController.navigate(Screen.GameDetail.createRoute(game.id))
+                        }
                     )
                     2 -> NewsTab(
                         news = uiState.news,
@@ -420,21 +468,6 @@ fun PlayerCard(
                                 )
                             }
                         }
-                        else -> {
-                            // Defensive/Other positions
-                            if (stats.tackles != null || stats.sacks != null) {
-                                Text(
-                                    text = buildString {
-                                        stats.tackles?.let { append("$it TKL") }
-                                        if (stats.tackles != null && stats.sacks != null) append(" • ")
-                                        stats.sacks?.let { append("${String.format("%.1f", it)} SK") }
-                                    },
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -451,7 +484,8 @@ fun GamesTab(
     teamAbbreviation: String,
     isLoading: Boolean,
     error: String?,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onGameClick: (GameDTO) -> Unit
 ) {
     when {
         isLoading -> LoadingScreen()
@@ -464,7 +498,11 @@ fun GamesTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(games, key = { it.id }) { game ->
-                    GameCard(game = game, perspective = teamAbbreviation)
+                    GameCard(
+                        game = game,
+                        perspective = teamAbbreviation,
+                        onClick = { onGameClick(game) }
+                    )
                 }
             }
         }
@@ -472,7 +510,11 @@ fun GamesTab(
 }
 
 @Composable
-fun GameCard(game: GameDTO, perspective: String) {
+fun GameCard(
+    game: GameDTO,
+    perspective: String,
+    onClick: () -> Unit
+) {
     val opponent = if (game.homeTeam.abbreviation == perspective) game.awayTeam else game.homeTeam
     val isHomeGame = game.homeTeam.abbreviation == perspective
     val gameResult = when {
@@ -489,7 +531,9 @@ fun GameCard(game: GameDTO, perspective: String) {
 
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -550,7 +594,11 @@ fun NewsCard(article: ArticleDTO) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* TODO: Open article in browser */ },
+            .clickable {
+                // Open article in browser
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(article.url))
+                context.startActivity(intent)
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
