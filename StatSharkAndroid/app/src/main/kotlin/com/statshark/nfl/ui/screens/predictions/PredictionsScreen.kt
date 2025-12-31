@@ -104,30 +104,32 @@ fun PredictionsScreen(
                         InfoCard()
                     }
 
-                    // Week and Confidence Filters
-                    item {
-                        FiltersCard(
-                            availableWeeks = uiState.availableWeeks,
-                            selectedWeek = uiState.selectedWeek,
-                            currentWeek = uiState.currentWeek,
-                            minConfidence = uiState.minConfidence,
-                            onWeekSelected = { viewModel.setSelectedWeek(it) },
-                            onConfidenceSelected = { viewModel.setMinConfidence(it) }
-                        )
-                    }
+                    // Week and Confidence Filters (only show when not pre-selected)
+                    if (uiState.preSelectedHomeTeam == null || uiState.preSelectedAwayTeam == null) {
+                        item {
+                            FiltersCard(
+                                availableWeeks = uiState.availableWeeks,
+                                selectedWeek = uiState.selectedWeek,
+                                currentWeek = uiState.currentWeek,
+                                minConfidence = uiState.minConfidence,
+                                onWeekSelected = { viewModel.setSelectedWeek(it) },
+                                onConfidenceSelected = { viewModel.setMinConfidence(it) }
+                            )
+                        }
 
-                    // Batch Predict Button
-                    item {
-                        BatchPredictButton(
-                            isLoading = uiState.isLoadingBatch,
-                            progress = uiState.batchProgress,
-                            gamesCount = if (uiState.selectedWeek == null) {
-                                uiState.upcomingGames.size
-                            } else {
-                                uiState.upcomingGames.count { it.week == uiState.selectedWeek }
-                            },
-                            onClick = { viewModel.predictAllGames() }
-                        )
+                        // Batch Predict Button
+                        item {
+                            BatchPredictButton(
+                                isLoading = uiState.isLoadingBatch,
+                                progress = uiState.batchProgress,
+                                gamesCount = if (uiState.selectedWeek == null) {
+                                    uiState.upcomingGames.size
+                                } else {
+                                    uiState.upcomingGames.count { it.week == uiState.selectedWeek }
+                                },
+                                onClick = { viewModel.predictAllGames() }
+                            )
+                        }
                     }
 
                     items(uiState.filteredGames) { game ->
