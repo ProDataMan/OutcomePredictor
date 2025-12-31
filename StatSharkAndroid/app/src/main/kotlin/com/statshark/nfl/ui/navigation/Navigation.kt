@@ -8,6 +8,7 @@ sealed class Screen(val route: String) {
     object Standings : Screen("standings")
     object Predictions : Screen("predictions")
     object Fantasy : Screen("fantasy")
+    object Admin : Screen("admin")
     object TeamDetail : Screen("team/{teamId}") {
         fun createRoute(teamId: String) = "team/$teamId"
     }
@@ -50,11 +51,18 @@ sealed class BottomNavItem(
         title = "Fantasy",
         icon = android.R.drawable.ic_menu_myplaces  // TODO: Replace with proper icon
     )
+
+    object Admin : BottomNavItem(
+        route = Screen.Admin.route,
+        title = "Admin",
+        icon = android.R.drawable.ic_lock_lock  // Shield/Admin icon
+    )
 }
 
 val bottomNavItems = listOf(
     BottomNavItem.Teams,
     BottomNavItem.Standings,
     BottomNavItem.Predictions,
-    BottomNavItem.Fantasy
+    BottomNavItem.Fantasy,
+    BottomNavItem.Admin
 )

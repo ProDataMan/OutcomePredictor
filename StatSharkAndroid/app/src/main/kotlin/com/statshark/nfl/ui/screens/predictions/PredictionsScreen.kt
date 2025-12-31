@@ -31,6 +31,7 @@ import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
 import com.statshark.nfl.ui.components.SkeletonGameCard
 import com.statshark.nfl.ui.components.SkeletonList
+import com.statshark.nfl.ui.components.FeedbackButton
 
 /**
  * Predictions Screen
@@ -58,6 +59,9 @@ fun PredictionsScreen(
                         )
                         Text("AI Predictions")
                     }
+                },
+                actions = {
+                    FeedbackButton(pageName = "AI Predictions")
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,

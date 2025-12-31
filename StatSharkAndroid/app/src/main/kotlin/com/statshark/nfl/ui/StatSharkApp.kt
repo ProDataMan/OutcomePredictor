@@ -27,6 +27,7 @@ import com.statshark.nfl.ui.screens.predictions.PredictionsScreen
 import com.statshark.nfl.ui.screens.standings.StandingsScreen
 import com.statshark.nfl.ui.screens.teams.TeamDetailScreen
 import com.statshark.nfl.ui.screens.teams.TeamsScreen
+import com.statshark.nfl.ui.components.AdminFeedbackScreen
 
 /**
  * Main App Composable
@@ -93,6 +94,12 @@ fun StatSharkApp() {
 
                 composable(Screen.Fantasy.route) {
                     FantasyScreen(navController = navController)
+                }
+
+                composable(Screen.Admin.route) {
+                    AdminFeedbackScreen(
+                        onNavigateBack = { navController.navigateUp() }
+                    )
                 }
 
                 // Detail screens

@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.statshark.nfl.data.model.TeamDTO
 import com.statshark.nfl.ui.navigation.Screen
+import com.statshark.nfl.ui.components.FeedbackButton
 
 /**
  * Teams Screen
@@ -41,6 +42,9 @@ fun TeamsScreen(
         topBar = {
             TopAppBar(
                 title = { Text("NFL Teams") },
+                actions = {
+                    FeedbackButton(pageName = "Teams List")
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer

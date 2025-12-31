@@ -1,8 +1,10 @@
 package com.statshark.nfl.data.repository
 
+import android.content.Context
 import com.statshark.nfl.api.StatSharkApiService
 import com.statshark.nfl.data.model.*
 import com.statshark.nfl.ui.theme.TeamColors
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,7 +20,10 @@ import javax.inject.Singleton
  * Handles data operations and caching
  */
 @Singleton
-class NFLRepository @Inject constructor(private val apiService: StatSharkApiService) {
+class NFLRepository @Inject constructor(
+    private val apiService: StatSharkApiService,
+    @ApplicationContext private val context: Context
+) {
 
     // In-memory cache
     private var cachedTeams: List<TeamDTO>? = null
