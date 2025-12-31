@@ -20,6 +20,7 @@ public struct EnhancedPredictor: GamePredictor {
     private let headToHeadWeight: Double
     private let homeAwayWeight: Double
     private let weatherImpactWeight: Double
+    private let restTravelWeight: Double
 
     /// Creates an enhanced predictor with configurable weights.
     ///
@@ -34,6 +35,7 @@ public struct EnhancedPredictor: GamePredictor {
     ///   - headToHeadWeight: Weight for head-to-head history (default: 0.25)
     ///   - homeAwayWeight: Weight for home/away splits (default: 0.12)
     ///   - weatherImpactWeight: Weight for weather conditions (default: 0.12)
+    ///   - restTravelWeight: Weight for rest and travel factors (default: 0.12)
     public init(
         gameRepository: GameRepository,
         injuryTracker: InjuryTracker? = nil,
@@ -44,7 +46,8 @@ public struct EnhancedPredictor: GamePredictor {
         newsSentimentWeight: Double = 0.08,
         headToHeadWeight: Double = 0.25,
         homeAwayWeight: Double = 0.12,
-        weatherImpactWeight: Double = 0.12
+        weatherImpactWeight: Double = 0.12,
+        restTravelWeight: Double = 0.12
     ) {
         self.gameRepository = gameRepository
         self.injuryTracker = injuryTracker
@@ -56,6 +59,7 @@ public struct EnhancedPredictor: GamePredictor {
         self.headToHeadWeight = headToHeadWeight
         self.homeAwayWeight = homeAwayWeight
         self.weatherImpactWeight = weatherImpactWeight
+        self.restTravelWeight = restTravelWeight
     }
 
     public func predict(game: Game, features: [String: Double]) async throws -> Prediction {
@@ -127,6 +131,17 @@ public struct EnhancedPredictor: GamePredictor {
             )
         }
 
+        // Analyze rest and travel
+        let restTravelAnalysis = analyzeRestAndTravel(
+            homeTeam: game.homeTeam,
+            awayTeam: game.awayTeam,
+            homeGames: completedHomeGames,
+            awayGames: completedAwayGames,
+            gameDate: game.scheduledDate
+        )
+        let restTravelAdjustment = restTravelAnalysis.calculateAdvantage()
+        let restTravelDetails = restTravelAnalysis.impactSummary
+
         // Combine all factors
         var homeWinProbability = (homeWinRate + (1.0 - awayWinRate)) / 2.0
         homeWinProbability += homeFieldAdvantage
@@ -135,6 +150,7 @@ public struct EnhancedPredictor: GamePredictor {
         homeWinProbability += injuryAdjustment * injuryImpactWeight
         homeWinProbability += newsSentimentAdjustment * newsSentimentWeight
         homeWinProbability += weatherAdjustment * weatherImpactWeight
+        homeWinProbability += restTravelAdjustment * restTravelWeight
 
         // Clamp to valid range
         homeWinProbability = max(0.0, min(1.0, homeWinProbability))
@@ -170,6 +186,7 @@ public struct EnhancedPredictor: GamePredictor {
             injuryDetails: injuryDetails,
             newsDetails: newsDetails,
             weatherDetails: weatherDetails,
+            restTravelDetails: restTravelDetails,
             confidence: confidence
         )
 
@@ -404,6 +421,96 @@ public struct EnhancedPredictor: GamePredictor {
         return domeTeams.contains { team.name.contains($0) }
     }
 
+    // MARK: - Rest and Travel Analysis
+
+    private func analyzeRestAndTravel(
+        homeTeam: Team,
+        awayTeam: Team,
+        homeGames: [Game],
+        awayGames: [Game],
+        gameDate: Date
+    ) -> RestAndTravelAnalysis {
+        // Calculate rest days for each team
+        let homeRestDays = calculateRestDays(for: homeTeam, in: homeGames, before: gameDate)
+        let awayRestDays = calculateRestDays(for: awayTeam, in: awayGames, before: gameDate)
+
+        // Calculate travel burden for away team
+        let travelDistance = calculateTravelDistance(from: awayTeam, to: homeTeam)
+        let timeZoneChange = calculateTimeZoneChange(from: awayTeam, to: homeTeam)
+
+        // Count consecutive road games for away team
+        let consecutiveRoadGames = countConsecutiveRoadGames(
+            for: awayTeam,
+            in: awayGames,
+            before: gameDate
+        )
+
+        // Detect Thursday night game (short week for both teams)
+        let isThursday = Calendar.current.component(.weekday, from: gameDate) == 5
+        let isThursdayNight = isThursday && (homeRestDays <= 4 || awayRestDays <= 4)
+
+        return RestAndTravelAnalysis(
+            homeTeamRestDays: homeRestDays,
+            awayTeamRestDays: awayRestDays,
+            travelDistance: travelDistance,
+            timeZoneChange: timeZoneChange,
+            consecutiveRoadGames: consecutiveRoadGames,
+            isThursdayNightGame: isThursdayNight
+        )
+    }
+
+    private func calculateRestDays(for team: Team, in games: [Game], before date: Date) -> Int {
+        // Find the most recent completed game before this date
+        let previousGames = games.filter { $0.scheduledDate < date && $0.outcome != nil }
+        guard let lastGame = previousGames.max(by: { $0.scheduledDate < $1.scheduledDate }) else {
+            return 7 // Default to normal week if no previous game found
+        }
+
+        let daysBetween = Calendar.current.dateComponents([.day], from: lastGame.scheduledDate, to: date).day ?? 7
+        return daysBetween
+    }
+
+    private func calculateTravelDistance(from awayTeam: Team, to homeTeam: Team) -> Double {
+        guard let awayLocation = NFLStadiums.location(for: awayTeam.name),
+              let homeLocation = NFLStadiums.location(for: homeTeam.name) else {
+            return 0.0 // Default if stadium not found
+        }
+
+        return awayLocation.distance(to: homeLocation)
+    }
+
+    private func calculateTimeZoneChange(from awayTeam: Team, to homeTeam: Team) -> Int {
+        guard let awayLocation = NFLStadiums.location(for: awayTeam.name),
+              let homeLocation = NFLStadiums.location(for: homeTeam.name) else {
+            return 0 // Default if stadium not found
+        }
+
+        return awayLocation.timeZoneDifference(to: homeLocation)
+    }
+
+    private func countConsecutiveRoadGames(
+        for team: Team,
+        in games: [Game],
+        before date: Date
+    ) -> Int {
+        // Count road games leading up to this one
+        let recentGames = games
+            .filter { $0.scheduledDate <= date }
+            .sorted { $0.scheduledDate < $1.scheduledDate }
+            .suffix(5) // Look at last 5 games
+
+        var consecutiveCount = 1 // Current game is a road game
+        for game in recentGames.reversed().dropFirst() { // Skip current game, go backwards
+            if game.awayTeam.id == team.id {
+                consecutiveCount += 1
+            } else {
+                break // Hit a home game, stop counting
+            }
+        }
+
+        return consecutiveCount
+    }
+
     // MARK: - Helper Methods
 
     private func calculateWinRate(for team: Team, in games: [Game]) -> Double {
@@ -480,6 +587,7 @@ public struct EnhancedPredictor: GamePredictor {
         injuryDetails: String,
         newsDetails: String,
         weatherDetails: String,
+        restTravelDetails: String,
         confidence: Double
     ) -> String {
         var reasoning = """
@@ -503,6 +611,10 @@ public struct EnhancedPredictor: GamePredictor {
             } else {
                 reasoning += "\(awayTeam.name) plays well on road despite home disadvantage.\n"
             }
+        }
+
+        if !restTravelDetails.isEmpty && restTravelDetails != "Normal rest and travel conditions" {
+            reasoning += "\nRest & Travel:\n\(restTravelDetails)\n"
         }
 
         if !weatherDetails.isEmpty {
