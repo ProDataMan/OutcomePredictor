@@ -1,4 +1,6 @@
 import Vapor
+import Fluent
+import FluentSQLiteDriver
 import OutcomePredictor
 import OutcomePredictorAPI
 
@@ -19,6 +21,16 @@ do {
 func configure(_ app: Application) async throws {
     // Enable static file serving from Public directory
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+
+    // Configure database
+    let databasePath = Environment.get("DATABASE_PATH") ?? "db.sqlite"
+    app.databases.use(.sqlite(.file(databasePath)), as: .sqlite)
+
+    // Add migrations
+    app.migrations.add(CreateFeedback())
+
+    // Run migrations automatically
+    try await app.autoMigrate()
 
     // Configure JSON encoder/decoder
     let encoder = JSONEncoder()
@@ -413,13 +425,123 @@ func routes(_ app: Application) throws {
         throw Abort(.notFound, reason: "API-Sports data source not configured")
     }
 
+    // MARK: - Feedback Routes
+
+    // POST /api/v1/feedback - Submit user feedback
+    api.post("feedback") { req async throws -> FeedbackDTO in
+        let submission = try req.content.decode(FeedbackSubmissionDTO.self)
+
+        let feedback = Feedback(
+            userId: submission.userId,
+            page: submission.page,
+            platform: submission.platform,
+            feedbackText: submission.feedbackText,
+            appVersion: submission.appVersion,
+            deviceModel: submission.deviceModel,
+            isRead: false
+        )
+
+        try await feedback.save(on: req.db)
+
+        // Send push notification to admin (placeholder - to be implemented)
+        Task {
+            await sendAdminNotification(feedback: feedback)
+        }
+
+        return FeedbackDTO(
+            id: feedback.id!.uuidString,
+            userId: feedback.userId,
+            page: feedback.page,
+            platform: feedback.platform,
+            feedbackText: feedback.feedbackText,
+            appVersion: feedback.appVersion,
+            deviceModel: feedback.deviceModel,
+            createdAt: feedback.createdAt!,
+            isRead: feedback.isRead
+        )
+    }
+
+    // GET /api/v1/feedback - Get all feedback (admin only)
+    api.get("feedback") { req async throws -> [FeedbackDTO] in
+        // Simple admin check - in production, use proper authentication
+        let adminUserId = Environment.get("ADMIN_USER_ID") ?? "admin"
+        let requestUserId = req.query[String.self, at: "userId"]
+
+        guard requestUserId == adminUserId else {
+            throw Abort(.unauthorized, reason: "Admin access required")
+        }
+
+        let feedbacks = try await Feedback.query(on: req.db)
+            .sort(\.$createdAt, .descending)
+            .all()
+
+        return feedbacks.map { feedback in
+            FeedbackDTO(
+                id: feedback.id!.uuidString,
+                userId: feedback.userId,
+                page: feedback.page,
+                platform: feedback.platform,
+                feedbackText: feedback.feedbackText,
+                appVersion: feedback.appVersion,
+                deviceModel: feedback.deviceModel,
+                createdAt: feedback.createdAt!,
+                isRead: feedback.isRead
+            )
+        }
+    }
+
+    // GET /api/v1/feedback/unread - Get unread feedback count (admin only)
+    api.get("feedback", "unread") { req async throws -> UnreadCountResponse in
+        let adminUserId = Environment.get("ADMIN_USER_ID") ?? "admin"
+        let requestUserId = req.query[String.self, at: "userId"]
+
+        guard requestUserId == adminUserId else {
+            throw Abort(.unauthorized, reason: "Admin access required")
+        }
+
+        let count = try await Feedback.query(on: req.db)
+            .filter(\.$isRead == false)
+            .count()
+
+        return UnreadCountResponse(unreadCount: count)
+    }
+
+    // POST /api/v1/feedback/mark-read - Mark feedback as read
+    api.post("feedback", "mark-read") { req async throws -> MessageResponse in
+        let markRead = try req.content.decode(MarkFeedbackReadDTO.self)
+
+        let feedbackIds = markRead.feedbackIds.compactMap { UUID(uuidString: $0) }
+
+        try await Feedback.query(on: req.db)
+            .filter(\.$id ~~ feedbackIds)
+            .set(\.$isRead, to: true)
+            .update()
+
+        return MessageResponse(message: "Marked \(feedbackIds.count) feedback items as read")
+    }
+
     // Catch-all route for 404 errors (must be last)
     app.get("**") { req async throws -> Response in
         try await req.fileio.asyncStreamFile(at: "\(req.application.directory.publicDirectory)404.html")
     }
 }
 
+// MARK: - Helper Functions
+
+/// Send push notification to admin when feedback is received
+func sendAdminNotification(feedback: Feedback) async {
+    // TODO: Implement push notification using FCM or APNS
+    // For now, just log
+    print("📬 New feedback received from \(feedback.userId) on \(feedback.platform)")
+    print("   Page: \(feedback.page)")
+    print("   Feedback: \(feedback.feedbackText)")
+}
+
 // MARK: - Response Models
+
+struct UnreadCountResponse: Content {
+    let unreadCount: Int
+}
 
 struct CacheStatsResponse: Content {
     let apiSports: APISportsCacheStats?

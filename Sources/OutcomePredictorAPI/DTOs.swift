@@ -448,3 +448,75 @@ public struct ConditionStatsDTO: Codable, Sendable {
         self.avgPointsAllowed = avgPointsAllowed
     }
 }
+
+// MARK: - Feedback DTOs
+
+/// Request to submit user feedback.
+public struct FeedbackSubmissionDTO: Codable, Sendable {
+    public let userId: String
+    public let page: String
+    public let platform: String
+    public let feedbackText: String
+    public let appVersion: String?
+    public let deviceModel: String?
+
+    public init(
+        userId: String,
+        page: String,
+        platform: String,
+        feedbackText: String,
+        appVersion: String? = nil,
+        deviceModel: String? = nil
+    ) {
+        self.userId = userId
+        self.page = page
+        self.platform = platform
+        self.feedbackText = feedbackText
+        self.appVersion = appVersion
+        self.deviceModel = deviceModel
+    }
+}
+
+/// Feedback item returned from the API.
+public struct FeedbackDTO: Codable, Sendable, Identifiable {
+    public let id: String
+    public let userId: String
+    public let page: String
+    public let platform: String
+    public let feedbackText: String
+    public let appVersion: String?
+    public let deviceModel: String?
+    public let createdAt: Date
+    public let isRead: Bool
+
+    public init(
+        id: String,
+        userId: String,
+        page: String,
+        platform: String,
+        feedbackText: String,
+        appVersion: String? = nil,
+        deviceModel: String? = nil,
+        createdAt: Date,
+        isRead: Bool
+    ) {
+        self.id = id
+        self.userId = userId
+        self.page = page
+        self.platform = platform
+        self.feedbackText = feedbackText
+        self.appVersion = appVersion
+        self.deviceModel = deviceModel
+        self.createdAt = createdAt
+        self.isRead = isRead
+    }
+}
+
+/// Request to mark feedback as read.
+public struct MarkFeedbackReadDTO: Codable, Sendable {
+    public let feedbackIds: [String]
+
+    public init(feedbackIds: [String]) {
+        self.feedbackIds = feedbackIds
+    }
+}

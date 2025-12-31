@@ -148,3 +148,7 @@ extension TeamRosterDTO {
         )
     }
 }
+
+// MARK: - Feedback mappers
+// Extension is defined in NFLServer/Feedback.swift since it depends on Fluent
+// No mapper needed here - conversion happens in the route handlers
