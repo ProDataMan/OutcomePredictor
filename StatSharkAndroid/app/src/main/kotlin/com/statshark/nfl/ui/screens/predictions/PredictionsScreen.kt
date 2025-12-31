@@ -41,9 +41,18 @@ import com.statshark.nfl.ui.components.FeedbackButton
 @Composable
 fun PredictionsScreen(
     navController: NavController,
-    viewModel: PredictionsViewModel = hiltViewModel()
+    viewModel: PredictionsViewModel = hiltViewModel(),
+    preSelectedHomeTeam: String? = null,
+    preSelectedAwayTeam: String? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Pre-select teams if provided
+    LaunchedEffect(preSelectedHomeTeam, preSelectedAwayTeam) {
+        if (preSelectedHomeTeam != null && preSelectedAwayTeam != null) {
+            viewModel.preSelectTeams(preSelectedHomeTeam, preSelectedAwayTeam)
+        }
+    }
 
     Scaffold(
         topBar = {

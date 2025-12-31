@@ -597,11 +597,9 @@ struct GameDetailView: View {
                                 Text("Vegas Odds")
                                     .font(.caption)
                                     .fontWeight(.semibold)
-                                if let bookmaker = vegasOdds.bookmaker {
-                                    Text("• \(bookmaker)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
+                                Text("• \(vegasOdds.bookmaker)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
                             }
 
                             // Moneyline

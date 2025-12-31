@@ -88,8 +88,28 @@ fun StatSharkApp() {
                     StandingsScreen(navController = navController)
                 }
 
-                composable(Screen.Predictions.route) {
-                    PredictionsScreen(navController = navController)
+                composable(
+                    route = Screen.Predictions.route,
+                    arguments = listOf(
+                        navArgument("homeTeam") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument("awayTeam") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val homeTeam = backStackEntry.arguments?.getString("homeTeam")
+                    val awayTeam = backStackEntry.arguments?.getString("awayTeam")
+                    PredictionsScreen(
+                        navController = navController,
+                        preSelectedHomeTeam = homeTeam,
+                        preSelectedAwayTeam = awayTeam
+                    )
                 }
 
                 composable(Screen.Fantasy.route) {

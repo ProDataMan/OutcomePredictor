@@ -212,4 +212,20 @@ class PredictionsViewModel @Inject constructor(
             )
         }
     }
+
+    /**
+     * Pre-select teams and automatically make prediction
+     * Called when navigating from team detail "Next Game" card
+     */
+    fun preSelectTeams(homeTeam: String, awayTeam: String) {
+        viewModelScope.launch {
+            // Find the game matching these teams
+            val game = _uiState.value.upcomingGames.firstOrNull {
+                it.homeTeam.abbreviation == homeTeam && it.awayTeam.abbreviation == awayTeam
+            }
+
+            // Automatically make prediction for this game if found
+            game?.let { makePrediction(it) }
+        }
+    }
 }

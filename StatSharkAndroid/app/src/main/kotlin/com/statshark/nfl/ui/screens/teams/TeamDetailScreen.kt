@@ -113,7 +113,13 @@ fun TeamDetailScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                                 .clickable {
-                                    navController.navigate(Screen.GameDetail.createRoute(game.id))
+                                    // Navigate to predictions with pre-selected teams
+                                    navController.navigate(
+                                        Screen.Predictions.createRoute(
+                                            homeTeam = game.homeTeam.abbreviation,
+                                            awayTeam = game.awayTeam.abbreviation
+                                        )
+                                    )
                                 },
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer

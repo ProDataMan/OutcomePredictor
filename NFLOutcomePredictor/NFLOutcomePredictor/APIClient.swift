@@ -455,7 +455,9 @@ final class APIClient: ObservableObject {
         appVersion: String?,
         deviceModel: String?
     ) async throws -> FeedbackDTO {
-        let url = baseURL.appendingPathComponent("/api/v1/feedback")
+        guard let url = URL(string: "\(baseURL)/feedback") else {
+            throw APIError.invalidURL
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -470,6 +472,8 @@ final class APIClient: ObservableObject {
             deviceModel: deviceModel
         )
 
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
         request.httpBody = try encoder.encode(submission)
 
         let (data, response) = try await urlSession.data(for: request)
@@ -488,7 +492,9 @@ final class APIClient: ObservableObject {
 
     /// Fetches all feedback (admin only).
     func fetchFeedback(userId: String) async throws -> [FeedbackDTO] {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/api/v1/feedback"), resolvingAgainstBaseURL: false)!
+        guard var components = URLComponents(string: "\(baseURL)/feedback") else {
+            throw APIError.invalidURL
+        }
         components.queryItems = [URLQueryItem(name: "userId", value: userId)]
 
         guard let url = components.url else {
@@ -511,7 +517,9 @@ final class APIClient: ObservableObject {
 
     /// Fetches unread feedback count (admin only).
     func fetchUnreadCount(userId: String) async throws -> Int {
-        var components = URLComponents(url: baseURL.appendingPathComponent("/api/v1/feedback/unread"), resolvingAgainstBaseURL: false)!
+        guard var components = URLComponents(string: "\(baseURL)/feedback/unread") else {
+            throw APIError.invalidURL
+        }
         components.queryItems = [URLQueryItem(name: "userId", value: userId)]
 
         guard let url = components.url else {
@@ -538,13 +546,17 @@ final class APIClient: ObservableObject {
 
     /// Marks feedback as read.
     func markFeedbackAsRead(feedbackIds: [String]) async throws {
-        let url = baseURL.appendingPathComponent("/api/v1/feedback/mark-read")
+        guard let url = URL(string: "\(baseURL)/feedback/mark-read") else {
+            throw APIError.invalidURL
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let markRead = MarkFeedbackReadDTO(feedbackIds: feedbackIds)
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
         request.httpBody = try encoder.encode(markRead)
 
         let (_, response) = try await urlSession.data(for: request)

@@ -78,11 +78,11 @@ struct PlayerComparisonView: View {
             )
             StatComparisonRow(
                 label: "Completion %",
-                value1: player1.stats?.completions != nil && player1.stats?.attempts != nil && player1.stats!.attempts! > 0
-                    ? Int((Double(player1.stats!.completions!) / Double(player1.stats!.attempts!)) * 100)
+                value1: player1.stats?.passingCompletions != nil && player1.stats?.passingAttempts != nil && player1.stats!.passingAttempts! > 0
+                    ? Int((Double(player1.stats!.passingCompletions!) / Double(player1.stats!.passingAttempts!)) * 100)
                     : nil,
-                value2: player2.stats?.completions != nil && player2.stats?.attempts != nil && player2.stats!.attempts! > 0
-                    ? Int((Double(player2.stats!.completions!) / Double(player2.stats!.attempts!)) * 100)
+                value2: player2.stats?.passingCompletions != nil && player2.stats?.passingAttempts != nil && player2.stats!.passingAttempts! > 0
+                    ? Int((Double(player2.stats!.passingCompletions!) / Double(player2.stats!.passingAttempts!)) * 100)
                     : nil
             )
         }
@@ -323,8 +323,8 @@ struct StatBar: View {
                     passingYards: 4183,
                     passingTouchdowns: 27,
                     passingInterceptions: 14,
-                    completions: 401,
-                    attempts: 597
+                    passingCompletions: 401,
+                    passingAttempts: 597
                 )
             ),
             player2: PlayerDTO(
@@ -337,8 +337,8 @@ struct StatBar: View {
                     passingYards: 3895,
                     passingTouchdowns: 29,
                     passingInterceptions: 18,
-                    completions: 359,
-                    attempts: 541
+                    passingCompletions: 359,
+                    passingAttempts: 541
                 )
             ),
             team1: TeamDTO(name: "Kansas City Chiefs", abbreviation: "KC", conference: "AFC", division: "West"),

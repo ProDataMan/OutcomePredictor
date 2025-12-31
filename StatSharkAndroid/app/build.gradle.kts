@@ -25,7 +25,7 @@ android {
         create("release") {
             keyAlias = properties.getProperty("STATSHARK_RELEASE_KEY_ALIAS")
             keyPassword = properties.getProperty("STATSHARK_RELEASE_KEY_PASSWORD")
-            storeFile = file("statshark-release-key.jks")
+            storeFile = rootProject.file("statshark-release-key.jks")
             storePassword = properties.getProperty("STATSHARK_RELEASE_STORE_PASSWORD")
         }
     }

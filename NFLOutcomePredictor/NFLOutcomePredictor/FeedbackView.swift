@@ -1,5 +1,39 @@
 import SwiftUI
-import OutcomePredictorAPI
+
+/// API errors for feedback operations.
+enum APIError: Error {
+    case invalidURL
+    case invalidResponse
+    case httpError(statusCode: Int)
+}
+
+/// Feedback item returned from the API.
+struct FeedbackDTO: Codable, Identifiable {
+    let id: String
+    let userId: String
+    let page: String
+    let platform: String
+    let feedbackText: String
+    let appVersion: String?
+    let deviceModel: String?
+    let createdAt: Date
+    let isRead: Bool
+}
+
+/// Request to mark feedback as read.
+struct MarkFeedbackReadDTO: Codable {
+    let feedbackIds: [String]
+}
+
+/// Request to submit user feedback.
+struct FeedbackSubmissionDTO: Codable {
+    let userId: String
+    let page: String
+    let platform: String
+    let feedbackText: String
+    let appVersion: String?
+    let deviceModel: String?
+}
 
 /// Feedback button that can be added to any view's toolbar or as a floating button.
 struct FeedbackButton: View {

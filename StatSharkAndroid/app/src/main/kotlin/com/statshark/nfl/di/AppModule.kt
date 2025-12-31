@@ -73,8 +73,8 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideNFLRepository(apiService: StatSharkApiService): NFLRepository {
-        return NFLRepository(apiService)
+    fun provideNFLRepository(apiService: StatSharkApiService, @ApplicationContext context: Context): NFLRepository {
+        return NFLRepository(apiService, context)
     }
 
     @Provides

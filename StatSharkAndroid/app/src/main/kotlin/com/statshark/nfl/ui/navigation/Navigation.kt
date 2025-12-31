@@ -6,7 +6,15 @@ package com.statshark.nfl.ui.navigation
 sealed class Screen(val route: String) {
     object Teams : Screen("teams")
     object Standings : Screen("standings")
-    object Predictions : Screen("predictions")
+    object Predictions : Screen("predictions?homeTeam={homeTeam}&awayTeam={awayTeam}") {
+        fun createRoute(homeTeam: String? = null, awayTeam: String? = null): String {
+            return if (homeTeam != null && awayTeam != null) {
+                "predictions?homeTeam=$homeTeam&awayTeam=$awayTeam"
+            } else {
+                "predictions"
+            }
+        }
+    }
     object Fantasy : Screen("fantasy")
     object Admin : Screen("admin")
     object TeamDetail : Screen("team/{teamId}") {
