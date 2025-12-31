@@ -61,7 +61,7 @@ public actor ConfigurationManager {
 
     /// Parse configuration file based on extension
     private func parseConfigFile(at path: String) -> [String: String]? {
-        guard let content = try? String(contentsOfFile: path) else {
+        guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
             return nil
         }
 

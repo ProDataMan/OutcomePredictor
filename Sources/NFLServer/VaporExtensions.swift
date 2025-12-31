@@ -17,3 +17,6 @@ extension PredictionRequest: Content {}
 extension TeamRosterDTO: Content {}
 extension PlayerDTO: Content {}
 extension PlayerStatsDTO: Content {}
+extension FeedbackDTO: Content {}
+extension FeedbackSubmissionDTO: Content {}
+extension MarkFeedbackReadDTO: Content {}

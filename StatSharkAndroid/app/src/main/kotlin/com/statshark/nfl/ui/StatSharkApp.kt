@@ -93,7 +93,7 @@ fun StatSharkApp() {
                 }
 
                 composable(Screen.Fantasy.route) {
-                    FantasyScreen(navController = navController)
+                    FantasyScreen()
                 }
 
                 composable(Screen.Admin.route) {

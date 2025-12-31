@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
 /// OpenWeatherMap API implementation of WeatherService.
 ///
 /// Free tier provides:
@@ -120,7 +124,27 @@ public actor OpenWeatherMapService: WeatherService {
     private func fetchCurrentWeather(for stadium: StadiumInfo, location: String, date: Date) async throws -> WeatherConditions {
         let url = URL(string: "\(baseURL)/weather?lat=\(stadium.lat)&lon=\(stadium.lon)&appid=\(apiKey)&units=imperial")!
 
+        #if canImport(FoundationNetworking)
+        // Linux/Server-side Swift: Use synchronous URLSession with async wrapper
+        let data = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+            let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                if let error = error {
+                    continuation.resume(throwing: WeatherServiceError.networkError(error))
+                    return
+                }
+                guard let data = data else {
+                    continuation.resume(throwing: WeatherServiceError.invalidResponse)
+                    return
+                }
+                continuation.resume(returning: data)
+            }
+            task.resume()
+        }
+        #else
+        // macOS/iOS: Use native async URLSession
         let (data, _) = try await URLSession.shared.data(from: url)
+        #endif
+
         let response = try JSONDecoder().decode(CurrentWeatherResponse.self, from: data)
 
         return WeatherConditions(
@@ -137,7 +161,27 @@ public actor OpenWeatherMapService: WeatherService {
     private func fetchForecastWeather(for stadium: StadiumInfo, location: String, date: Date) async throws -> WeatherConditions {
         let url = URL(string: "\(baseURL)/forecast?lat=\(stadium.lat)&lon=\(stadium.lon)&appid=\(apiKey)&units=imperial")!
 
+        #if canImport(FoundationNetworking)
+        // Linux/Server-side Swift: Use synchronous URLSession with async wrapper
+        let data = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+            let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                if let error = error {
+                    continuation.resume(throwing: WeatherServiceError.networkError(error))
+                    return
+                }
+                guard let data = data else {
+                    continuation.resume(throwing: WeatherServiceError.invalidResponse)
+                    return
+                }
+                continuation.resume(returning: data)
+            }
+            task.resume()
+        }
+        #else
+        // macOS/iOS: Use native async URLSession
         let (data, _) = try await URLSession.shared.data(from: url)
+        #endif
+
         let response = try JSONDecoder().decode(ForecastResponse.self, from: data)
 
         // Find the forecast closest to game time

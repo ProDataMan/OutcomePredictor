@@ -106,6 +106,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.material:material:1.6.7")
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.27.0")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
