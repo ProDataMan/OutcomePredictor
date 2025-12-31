@@ -25,7 +25,9 @@ data class PredictionsUiState(
     val selectedWeek: Int? = null,
     val minConfidence: Double = 0.0,
     val isLoadingBatch: Boolean = false,
-    val batchProgress: Float = 0f
+    val batchProgress: Float = 0f,
+    val preSelectedHomeTeam: String? = null,
+    val preSelectedAwayTeam: String? = null
 ) {
     // Available weeks from games
     val availableWeeks: List<Int>
@@ -35,9 +37,17 @@ data class PredictionsUiState(
     val currentWeek: Int?
         get() = upcomingGames.firstOrNull()?.week
 
-    // Filtered games by week and confidence
+    // Filtered games by week, confidence, and pre-selection
     val filteredGames: List<GameDTO>
         get() {
+            // If teams are pre-selected, show only that game
+            if (preSelectedHomeTeam != null && preSelectedAwayTeam != null) {
+                return upcomingGames.filter { game ->
+                    (game.homeTeam.abbreviation == preSelectedHomeTeam && game.awayTeam.abbreviation == preSelectedAwayTeam) ||
+                    (game.homeTeam.abbreviation == preSelectedAwayTeam && game.awayTeam.abbreviation == preSelectedHomeTeam)
+                }
+            }
+
             var games = if (selectedWeek == null) {
                 upcomingGames
             } else {
@@ -250,9 +260,16 @@ class PredictionsViewModel @Inject constructor(
      */
     fun preSelectTeams(homeTeam: String, awayTeam: String) {
         viewModelScope.launch {
+            // Set pre-selected teams in state to filter the games list
+            _uiState.value = _uiState.value.copy(
+                preSelectedHomeTeam = homeTeam,
+                preSelectedAwayTeam = awayTeam
+            )
+
             // Find the game matching these teams
             val game = _uiState.value.upcomingGames.firstOrNull {
-                it.homeTeam.abbreviation == homeTeam && it.awayTeam.abbreviation == awayTeam
+                (it.homeTeam.abbreviation == homeTeam && it.awayTeam.abbreviation == awayTeam) ||
+                (it.homeTeam.abbreviation == awayTeam && it.awayTeam.abbreviation == homeTeam)
             }
 
             // Automatically make prediction for this game if found

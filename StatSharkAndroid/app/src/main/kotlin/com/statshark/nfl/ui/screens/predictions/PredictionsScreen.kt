@@ -485,15 +485,21 @@ fun PredictionResult(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Winner Name
-        val winnerTeam = if (prediction.predictedWinner == game.homeTeam.abbreviation) {
+        // Winner Name (calculated from probabilities)
+        val predictedWinner = if (prediction.homeWinProbability > prediction.awayWinProbability) {
+            game.homeTeam.abbreviation
+        } else {
+            game.awayTeam.abbreviation
+        }
+
+        val winnerTeam = if (predictedWinner == game.homeTeam.abbreviation) {
             game.homeTeam
         } else {
             game.awayTeam
         }
 
         Text(
-            text = "${winnerTeam.name} (${prediction.predictedWinner})",
+            text = "${winnerTeam.name} ($predictedWinner)",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onTertiaryContainer

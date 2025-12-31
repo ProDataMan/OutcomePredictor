@@ -376,6 +376,13 @@ fun PredictionCard(
  */
 @Composable
 fun PredictionContent(prediction: PredictionDTO) {
+    // Calculate predicted winner from probabilities
+    val predictedWinner = if (prediction.homeWinProbability > prediction.awayWinProbability) {
+        prediction.homeTeam.abbreviation
+    } else {
+        prediction.awayTeam.abbreviation
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -393,11 +400,11 @@ fun PredictionContent(prediction: PredictionDTO) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Team helmet icon
-                val helmetResourceId = getTeamHelmetResource(prediction.predictedWinner)
+                val helmetResourceId = getTeamHelmetResource(predictedWinner)
                 if (helmetResourceId != null) {
                     androidx.compose.foundation.Image(
                         painter = painterResource(id = helmetResourceId),
-                        contentDescription = "${prediction.predictedWinner} helmet",
+                        contentDescription = "$predictedWinner helmet",
                         modifier = Modifier.size(60.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -411,7 +418,7 @@ fun PredictionContent(prediction: PredictionDTO) {
                 )
 
                 Text(
-                    text = "Predicted Winner: ${prediction.predictedWinner}",
+                    text = "Predicted Winner: $predictedWinner",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )

@@ -135,17 +135,26 @@ data class TeamRosterDTO(
  */
 @Serializable
 data class PredictionDTO(
+    @SerializedName("game_id")
+    val gameId: String,
     @SerializedName("home_team")
-    val homeTeam: String,
+    val homeTeam: TeamDTO,
     @SerializedName("away_team")
-    val awayTeam: String,
-    @SerializedName("predicted_winner")
-    val predictedWinner: String,
-    val confidence: Double,
+    val awayTeam: TeamDTO,
+    @SerializedName("scheduled_date")
+    val scheduledDate: String,
+    val location: String,
+    val week: Int,
+    val season: Int,
     @SerializedName("home_win_probability")
     val homeWinProbability: Double,
     @SerializedName("away_win_probability")
     val awayWinProbability: Double,
+    val confidence: Double,
+    @SerializedName("predicted_home_score")
+    val predictedHomeScore: Int? = null,
+    @SerializedName("predicted_away_score")
+    val predictedAwayScore: Int? = null,
     val reasoning: String,
     @SerializedName("vegas_odds")
     val vegasOdds: VegasOddsDTO? = null
@@ -166,7 +175,7 @@ data class VegasOddsDTO(
     val homeImpliedProbability: Double? = null,
     @SerializedName("away_implied_probability")
     val awayImpliedProbability: Double? = null,
-    val bookmaker: String? = null
+    val bookmaker: String
 )
 
 /**
