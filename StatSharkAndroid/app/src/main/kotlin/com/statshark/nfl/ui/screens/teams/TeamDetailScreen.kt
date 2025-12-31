@@ -37,6 +37,7 @@ import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
 import com.statshark.nfl.ui.components.FeedbackButton
+import com.statshark.nfl.data.cache.ArticleCache
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -194,7 +195,8 @@ fun TeamDetailScreen(
                         news = uiState.news,
                         isLoading = uiState.isLoadingNews,
                         error = uiState.newsError,
-                        onRetry = { viewModel.retry() }
+                        onRetry = { viewModel.retry() },
+                        navController = navController
                     )
                 }
             }
@@ -573,7 +575,8 @@ fun NewsTab(
     news: List<ArticleDTO>,
     isLoading: Boolean,
     error: String?,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    navController: NavController
 ) {
     when {
         isLoading -> LoadingScreen()
@@ -586,7 +589,7 @@ fun NewsTab(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(news, key = { it.id }) { article ->
-                    NewsCard(article = article)
+                    NewsCard(article = article, navController = navController)
                 }
             }
         }
@@ -597,17 +600,16 @@ fun NewsTab(
  * News Card
  */
 @Composable
-fun NewsCard(article: ArticleDTO) {
-    val context = LocalContext.current
+fun NewsCard(article: ArticleDTO, navController: NavController) {
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.US) }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                // Open article in browser
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(article.url))
-                context.startActivity(intent)
+                // Cache article and navigate to detail screen
+                ArticleCache.put(article)
+                navController.navigate(Screen.ArticleDetail.createRoute(article.id))
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
