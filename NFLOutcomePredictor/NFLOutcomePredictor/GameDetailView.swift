@@ -1085,6 +1085,7 @@ struct HistoricalGameRow: View {
 struct UpcomingGameCard: View {
     let game: GameDTO
     let isSelected: Bool
+    var prediction: PredictionResult? = nil
 
     private var isInProgress: Bool {
         game.status?.lowercased() == "in progress" || (game.date < Date() && game.homeScore == nil && game.awayScore == nil)
@@ -1137,12 +1138,22 @@ struct UpcomingGameCard: View {
                 }
             }
 
-            // Week indicator or live scores
+            // Week indicator, live scores, or prediction
             if isInProgress, let homeScore = game.homeScore, let awayScore = game.awayScore {
                 Text("\(awayScore) - \(homeScore)")
                     .font(.caption2)
                     .fontWeight(.bold)
                     .foregroundColor(.red)
+            } else if let prediction = prediction {
+                VStack(spacing: 2) {
+                    Text("\(prediction.predictedWinner) to win")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.green)
+                    Text("\(Int(prediction.confidence * 100))% confidence")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             } else {
                 Text("Week \(game.week ?? 0)")
                     .font(.caption2)

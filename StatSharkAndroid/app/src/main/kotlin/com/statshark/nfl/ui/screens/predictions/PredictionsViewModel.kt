@@ -21,8 +21,40 @@ data class PredictionsUiState(
     val isLoadingGames: Boolean = false,
     val gamesError: String? = null,
     val loadingPredictions: Set<String> = emptySet(),
-    val predictionErrors: Map<String, String> = emptyMap()
-)
+    val predictionErrors: Map<String, String> = emptyMap(),
+    val selectedWeek: Int? = null,
+    val minConfidence: Double = 0.0,
+    val isLoadingBatch: Boolean = false,
+    val batchProgress: Float = 0f
+) {
+    // Available weeks from games
+    val availableWeeks: List<Int>
+        get() = upcomingGames.mapNotNull { it.week }.distinct().sorted()
+
+    // Current week (first week with games)
+    val currentWeek: Int?
+        get() = upcomingGames.firstOrNull()?.week
+
+    // Filtered games by week and confidence
+    val filteredGames: List<GameDTO>
+        get() {
+            var games = if (selectedWeek == null) {
+                upcomingGames
+            } else {
+                upcomingGames.filter { it.week == selectedWeek }
+            }
+
+            // Apply confidence filter
+            if (minConfidence > 0) {
+                games = games.filter { game ->
+                    val prediction = predictions[game.id]
+                    prediction != null && prediction.confidence >= minConfidence
+                }
+            }
+
+            return games
+        }
+}
 
 /**
  * Predictions ViewModel
@@ -102,5 +134,82 @@ class PredictionsViewModel @Inject constructor(
      */
     fun retry() {
         loadUpcomingGames()
+    }
+
+    /**
+     * Update selected week filter
+     */
+    fun setSelectedWeek(week: Int?) {
+        _uiState.value = _uiState.value.copy(selectedWeek = week)
+    }
+
+    /**
+     * Update minimum confidence filter
+     */
+    fun setMinConfidence(confidence: Double) {
+        _uiState.value = _uiState.value.copy(minConfidence = confidence)
+    }
+
+    /**
+     * Predict all games in current filter
+     */
+    fun predictAllGames() {
+        viewModelScope.launch {
+            val games = if (_uiState.value.selectedWeek == null) {
+                _uiState.value.upcomingGames
+            } else {
+                _uiState.value.upcomingGames.filter { it.week == _uiState.value.selectedWeek }
+            }
+
+            if (games.isEmpty()) return@launch
+
+            _uiState.value = _uiState.value.copy(
+                isLoadingBatch = true,
+                batchProgress = 0f
+            )
+
+            val total = games.size.toFloat()
+
+            games.forEachIndexed { index, game ->
+                val gameId = game.id
+
+                // Skip if already predicted
+                if (_uiState.value.predictions.containsKey(gameId)) {
+                    _uiState.value = _uiState.value.copy(
+                        batchProgress = (index + 1) / total
+                    )
+                    return@forEachIndexed
+                }
+
+                repository.makePrediction(
+                    homeTeam = game.homeTeam.abbreviation,
+                    awayTeam = game.awayTeam.abbreviation,
+                    season = game.season,
+                    week = game.week
+                ).fold(
+                    onSuccess = { prediction ->
+                        _uiState.value = _uiState.value.copy(
+                            predictions = _uiState.value.predictions + (gameId to prediction),
+                            batchProgress = (index + 1) / total
+                        )
+                    },
+                    onFailure = { error ->
+                        // Continue with other predictions even if one fails
+                        _uiState.value = _uiState.value.copy(
+                            predictionErrors = _uiState.value.predictionErrors + (gameId to (error.message ?: "Prediction failed")),
+                            batchProgress = (index + 1) / total
+                        )
+                    }
+                )
+
+                // Small delay to avoid overwhelming the server
+                kotlinx.coroutines.delay(100)
+            }
+
+            _uiState.value = _uiState.value.copy(
+                isLoadingBatch = false,
+                batchProgress = 1f
+            )
+        }
     }
 }

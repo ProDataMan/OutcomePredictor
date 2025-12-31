@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,8 @@ import com.statshark.nfl.data.model.GameDTO
 import com.statshark.nfl.data.model.PredictionDTO
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
+import com.statshark.nfl.ui.components.SkeletonGameCard
+import com.statshark.nfl.ui.components.SkeletonList
 
 /**
  * Predictions Screen
@@ -88,7 +91,33 @@ fun PredictionsScreen(
                         InfoCard()
                     }
 
-                    items(uiState.upcomingGames) { game ->
+                    // Week and Confidence Filters
+                    item {
+                        FiltersCard(
+                            availableWeeks = uiState.availableWeeks,
+                            selectedWeek = uiState.selectedWeek,
+                            currentWeek = uiState.currentWeek,
+                            minConfidence = uiState.minConfidence,
+                            onWeekSelected = { viewModel.setSelectedWeek(it) },
+                            onConfidenceSelected = { viewModel.setMinConfidence(it) }
+                        )
+                    }
+
+                    // Batch Predict Button
+                    item {
+                        BatchPredictButton(
+                            isLoading = uiState.isLoadingBatch,
+                            progress = uiState.batchProgress,
+                            gamesCount = if (uiState.selectedWeek == null) {
+                                uiState.upcomingGames.size
+                            } else {
+                                uiState.upcomingGames.count { it.week == uiState.selectedWeek }
+                            },
+                            onClick = { viewModel.predictAllGames() }
+                        )
+                    }
+
+                    items(uiState.filteredGames) { game ->
                         GamePredictionCard(
                             game = game,
                             prediction = uiState.predictions[game.id],
@@ -727,15 +756,34 @@ fun ProbabilityChip(team: String, probability: Double) {
 }
 
 /**
- * Loading Screen
+ * Loading Screen - Shows skeleton cards
  */
 @Composable
 fun LoadingScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        CircularProgressIndicator()
+        // Info card placeholder
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+            )
+        }
+
+        // Skeleton game cards
+        SkeletonList(count = 3) {
+            SkeletonGameCard()
+        }
     }
 }
 
@@ -789,6 +837,190 @@ fun EmptyScreen(message: String) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+/**
+ * Filters Card - Week and Confidence Filters
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FiltersCard(
+    availableWeeks: List<Int>,
+    selectedWeek: Int?,
+    currentWeek: Int?,
+    minConfidence: Double,
+    onWeekSelected: (Int?) -> Unit,
+    onConfidenceSelected: (Double) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Filters",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Week Filter
+            var weekExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = weekExpanded,
+                onExpandedChange = { weekExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedWeek?.let { "Week $it${if (it == currentWeek) " (Current)" else ""}" } ?: "All Weeks",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Week") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = weekExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    colors = OutlinedTextFieldDefaults.colors()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = weekExpanded,
+                    onDismissRequest = { weekExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("All Weeks") },
+                        onClick = {
+                            onWeekSelected(null)
+                            weekExpanded = false
+                        }
+                    )
+                    availableWeeks.forEach { week ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Week $week")
+                                    if (week == currentWeek) {
+                                        Text(
+                                            text = "(Current)",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                onWeekSelected(week)
+                                weekExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Confidence Filter
+            var confidenceExpanded by remember { mutableStateOf(false) }
+            val confidenceOptions = listOf(
+                "All Predictions" to 0.0,
+                "50%+ Confidence" to 0.5,
+                "60%+ Confidence" to 0.6,
+                "70%+ Confidence" to 0.7,
+                "80%+ Confidence" to 0.8
+            )
+
+            ExposedDropdownMenuBox(
+                expanded = confidenceExpanded,
+                onExpandedChange = { confidenceExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = confidenceOptions.find { it.second == minConfidence }?.first ?: "All Predictions",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Confidence") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = confidenceExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    colors = OutlinedTextFieldDefaults.colors()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = confidenceExpanded,
+                    onDismissRequest = { confidenceExpanded = false }
+                ) {
+                    confidenceOptions.forEach { (label, value) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                onConfidenceSelected(value)
+                                confidenceExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Batch Predict Button
+ */
+@Composable
+fun BatchPredictButton(
+    isLoading: Boolean,
+    progress: Float,
+    gamesCount: Int,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        if (isLoading) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                LinearProgressIndicator(
+                    progress = progress,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "Predicting games: ${(progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        } else {
+            Button(
+                onClick = onClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                enabled = gamesCount > 0
+            ) {
+                Icon(
+                    painter = painterResource(android.R.drawable.ic_media_play),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Predict All $gamesCount Games")
+            }
         }
     }
 }

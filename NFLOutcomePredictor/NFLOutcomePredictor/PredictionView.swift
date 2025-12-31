@@ -12,9 +12,25 @@ struct PredictionView: View {
     @State private var showingTeamPicker = false
     @State private var pickingHome = true
     @State private var selectedUpcomingGameIndex: Int?
+    @State private var minConfidence: Double = 0.0
+
+    // Batch predictions
+    @State private var batchPredictions: [String: PredictionResult] = [:]
+    @State private var isLoadingBatch = false
+    @State private var batchProgress: Double = 0.0
+
+    // Confidence filter options
+    private let confidenceOptions: [(label: String, value: Double)] = [
+        ("All Predictions", 0.0),
+        ("50%+ Confidence", 0.5),
+        ("60%+ Confidence", 0.6),
+        ("70%+ Confidence", 0.7),
+        ("80%+ Confidence", 0.8)
+    ]
 
     // Task management for predictions only
     @State private var predictionTask: Task<Void, Never>?
+    @State private var batchPredictionTask: Task<Void, Never>?
 
     // Current week number for highlighting and disabling past weeks
     private var currentWeek: Int? {
@@ -35,10 +51,29 @@ struct PredictionView: View {
 
     // Filter games by selected week
     private var filteredGames: [GameDTO] {
-        guard let selectedWeek = selectedWeek else {
-            return dataManager.upcomingGames
+        var games = selectedWeek == nil
+            ? dataManager.upcomingGames
+            : dataManager.upcomingGames.filter { $0.week == selectedWeek }
+
+        // Apply confidence filter if set
+        if minConfidence > 0 {
+            games = games.filter { game in
+                guard let prediction = batchPredictions[game.id] else {
+                    return false
+                }
+                return prediction.confidence >= minConfidence
+            }
         }
-        return dataManager.upcomingGames.filter { $0.week == selectedWeek }
+
+        return games
+    }
+
+    // Count of games that would be predicted
+    private var gamesCount: Int {
+        if selectedWeek == nil {
+            return dataManager.upcomingGames.count
+        }
+        return dataManager.upcomingGames.filter { $0.week == selectedWeek }.count
     }
 
     var body: some View {
@@ -54,10 +89,11 @@ struct PredictionView: View {
                     if !availableWeeks.isEmpty {
                         VStack(spacing: 8) {
                             HStack {
-                                Text("Filter by Week:")
-                                    .font(.headline)
+                                Text("Week:")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
                                 Picker("Week", selection: $selectedWeek) {
-                                    Text("All Weeks").tag(nil as Int?)
+                                    Text("All").tag(nil as Int?)
                                     ForEach(availableWeeks, id: \.self) { week in
                                         HStack {
                                             if week == currentWeek {
@@ -72,9 +108,20 @@ struct PredictionView: View {
                                 }
                                 .pickerStyle(.menu)
                                 .onChange(of: selectedWeek) { _ in
-                                    // Clear selection when week changes
                                     selectedUpcomingGameIndex = nil
                                 }
+
+                                Spacer()
+
+                                Text("Confidence:")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Picker("Confidence", selection: $minConfidence) {
+                                    ForEach(confidenceOptions, id: \.value) { option in
+                                        Text(option.label).tag(option.value)
+                                    }
+                                }
+                                .pickerStyle(.menu)
                             }
                             .padding(.horizontal)
 
@@ -100,6 +147,37 @@ struct PredictionView: View {
                         }
                     }
 
+                    // Batch Prediction Button
+                    if !dataManager.upcomingGames.isEmpty {
+                        VStack(spacing: 8) {
+                            if isLoadingBatch {
+                                VStack(spacing: 8) {
+                                    ProgressView(value: batchProgress)
+                                        .padding(.horizontal)
+                                    Text("Predicting games: \(Int(batchProgress * 100))%")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            } else {
+                                Button {
+                                    predictAllGamesTask()
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "bolt.fill")
+                                        Text("Predict All \(gamesCount) Games")
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.accentColor.opacity(0.1))
+                                    .foregroundColor(.accentColor)
+                                    .cornerRadius(8)
+                                }
+                                .disabled(gamesCount == 0)
+                                .padding(.horizontal)
+                            }
+                        }
+                    }
+
                     // Upcoming games section
                     if !filteredGames.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
@@ -121,10 +199,33 @@ struct PredictionView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(Array(filteredGames.prefix(10).enumerated()), id: \.element.id) { index, game in
-                                        UpcomingGameCard(game: game, isSelected: selectedUpcomingGameIndex == index)
+                                        UpcomingGameCard(
+                                            game: game,
+                                            isSelected: selectedUpcomingGameIndex == index,
+                                            prediction: batchPredictions[game.id]
+                                        )
                                             .onTapGesture {
                                                 selectUpcomingGame(at: index)
                                             }
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding(.top)
+
+                        Divider()
+                            .padding(.vertical, 8)
+                    } else if dataManager.isLoadingGames {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Upcoming Games")
+                                .font(.headline)
+                                .padding(.horizontal)
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(0..<3, id: \.self) { _ in
+                                        SkeletonGameCard()
                                     }
                                 }
                                 .padding(.horizontal)
@@ -194,6 +295,9 @@ struct PredictionView: View {
                     if let prediction = prediction {
                         PredictionResultView(prediction: prediction)
                             .padding()
+                    } else if isLoadingPrediction {
+                        SkeletonPredictionCard()
+                            .padding()
                     }
 
                     // Error message
@@ -201,15 +305,6 @@ struct PredictionView: View {
                         Text(error)
                             .foregroundColor(.red)
                             .padding()
-                    }
-
-                    // Loading indicator for games
-                    if dataManager.isLoadingGames {
-                        HStack {
-                            ProgressView()
-                            Text("Loading upcoming games...")
-                        }
-                        .padding()
                     }
 
                     // General error from data manager
@@ -305,6 +400,56 @@ struct PredictionView: View {
                 predictionError = error.localizedDescription
                 isLoadingPrediction = false
             }
+        }
+    }
+
+    private func predictAllGamesTask() {
+        batchPredictionTask?.cancel()
+
+        batchPredictionTask = Task {
+            await predictAllGames()
+        }
+    }
+
+    private func predictAllGames() async {
+        let gamesToPredict = selectedWeek == nil
+            ? dataManager.upcomingGames
+            : dataManager.upcomingGames.filter { $0.week == selectedWeek }
+
+        guard !gamesToPredict.isEmpty else { return }
+
+        await MainActor.run {
+            isLoadingBatch = true
+            batchProgress = 0.0
+        }
+
+        let total = Double(gamesToPredict.count)
+
+        for (index, game) in gamesToPredict.enumerated() {
+            guard !Task.isCancelled else { break }
+
+            do {
+                let result = try await dataManager.makePrediction(
+                    home: game.homeTeam.abbreviation,
+                    away: game.awayTeam.abbreviation,
+                    season: game.season ?? Calendar.current.component(.year, from: Date())
+                )
+
+                await MainActor.run {
+                    batchPredictions[game.id] = result
+                    batchProgress = Double(index + 1) / total
+                }
+            } catch {
+                print("Error predicting game \(game.id): \(error)")
+            }
+
+            // Small delay to avoid overwhelming the server
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        await MainActor.run {
+            isLoadingBatch = false
+            batchProgress = 1.0
         }
     }
 }

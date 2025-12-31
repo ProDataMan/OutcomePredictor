@@ -67,13 +67,7 @@ struct TeamsListView: View {
         NavigationStack {
             Group {
                 if dataManager.isLoadingTeams {
-                    VStack(spacing: 20) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                        Text("Loading teams...")
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                    }
+                    LoadingSkeletonView()
                 } else if let error = error ?? dataManager.error {
                     ErrorView(error: error) {
                         Task {
@@ -193,10 +187,56 @@ struct ErrorView: View {
     }
 }
 
+struct LoadingSkeletonView: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                // Skeleton for status bar
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemGray5))
+                    .frame(height: 60)
+                    .padding()
+                    .opacity(isAnimating ? 0.3 : 0.6)
+
+                // Skeleton for segmented control
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemGray5))
+                    .frame(height: 32)
+                    .padding()
+                    .opacity(isAnimating ? 0.4 : 0.7)
+
+                // Skeleton for team cards
+                LazyVGrid(columns: [
+                    GridItem(.adaptive(minimum: 160), spacing: 16)
+                ], spacing: 16) {
+                    ForEach(0..<8, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                            .frame(height: 160)
+                            .opacity(isAnimating ? 0.3 : 0.6)
+                    }
+                }
+                .padding()
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                isAnimating = true
+            }
+        }
+    }
+}
+
 #Preview("Content View") {
     ContentView()
 }
 
 #Preview("Teams List") {
     TeamsListView()
+}
+
+#Preview("Loading Skeleton") {
+    LoadingSkeletonView()
 }
