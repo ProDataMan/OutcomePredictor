@@ -24,6 +24,7 @@ import com.statshark.nfl.ui.screens.fantasy.FantasyScreen
 import com.statshark.nfl.ui.screens.game.GameDetailScreen
 import com.statshark.nfl.ui.screens.player.PlayerDetailScreen
 import com.statshark.nfl.ui.screens.predictions.PredictionsScreen
+import com.statshark.nfl.ui.screens.standings.StandingsScreen
 import com.statshark.nfl.ui.screens.teams.TeamDetailScreen
 import com.statshark.nfl.ui.screens.teams.TeamsScreen
 
@@ -80,6 +81,10 @@ fun StatSharkApp() {
             ) {
                 composable(Screen.Teams.route) {
                     TeamsScreen(navController = navController)
+                }
+
+                composable(Screen.Standings.route) {
+                    StandingsScreen(navController = navController)
                 }
 
                 composable(Screen.Predictions.route) {

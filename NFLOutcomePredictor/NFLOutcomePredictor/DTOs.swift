@@ -560,3 +560,97 @@ public struct GameWeatherDTO: Codable, Sendable {
         self.timestamp = timestamp
     }
 }
+
+// MARK: - Standings DTOs
+
+/// Team standings information calculated from game results.
+public struct TeamStandings: Codable, Sendable, Identifiable {
+    public let team: TeamDTO
+    public let wins: Int
+    public let losses: Int
+    public let ties: Int
+    public let winPercentage: Double
+    public let pointsFor: Int
+    public let pointsAgainst: Int
+    public let divisionWins: Int
+    public let divisionLosses: Int
+    public let conferenceWins: Int
+    public let conferenceLosses: Int
+    public let streak: String  // e.g., "W3" or "L2"
+
+    public var id: String { team.abbreviation }
+
+    public var record: String {
+        if ties > 0 {
+            return "\(wins)-\(losses)-\(ties)"
+        }
+        return "\(wins)-\(losses)"
+    }
+
+    public init(
+        team: TeamDTO,
+        wins: Int,
+        losses: Int,
+        ties: Int,
+        winPercentage: Double,
+        pointsFor: Int,
+        pointsAgainst: Int,
+        divisionWins: Int,
+        divisionLosses: Int,
+        conferenceWins: Int,
+        conferenceLosses: Int,
+        streak: String
+    ) {
+        self.team = team
+        self.wins = wins
+        self.losses = losses
+        self.ties = ties
+        self.winPercentage = winPercentage
+        self.pointsFor = pointsFor
+        self.pointsAgainst = pointsAgainst
+        self.divisionWins = divisionWins
+        self.divisionLosses = divisionLosses
+        self.conferenceWins = conferenceWins
+        self.conferenceLosses = conferenceLosses
+        self.streak = streak
+    }
+}
+
+/// Division standings grouping teams by division.
+public struct DivisionStandings: Codable, Sendable, Identifiable {
+    public let conference: String
+    public let division: String
+    public let teams: [TeamStandings]
+
+    public var id: String { "\(conference)-\(division)" }
+
+    public init(conference: String, division: String, teams: [TeamStandings]) {
+        self.conference = conference
+        self.division = division
+        self.teams = teams
+    }
+}
+
+/// League-wide standings organized by conference and division.
+public struct LeagueStandings: Codable, Sendable {
+    public let season: Int
+    public let week: Int?
+    public let lastUpdated: Date
+    public let divisions: [DivisionStandings]
+
+    // Helper computed properties
+    public var afcStandings: [DivisionStandings] {
+        divisions.filter { $0.conference == "AFC" }
+    }
+
+    public var nfcStandings: [DivisionStandings] {
+        divisions.filter { $0.conference == "NFC" }
+    }
+
+    public init(season: Int, week: Int?, lastUpdated: Date, divisions: [DivisionStandings]) {
+        self.season = season
+        self.week = week
+        self.lastUpdated = lastUpdated
+        self.divisions = divisions
+    }
+}

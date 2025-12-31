@@ -5,6 +5,7 @@ package com.statshark.nfl.ui.navigation
  */
 sealed class Screen(val route: String) {
     object Teams : Screen("teams")
+    object Standings : Screen("standings")
     object Predictions : Screen("predictions")
     object Fantasy : Screen("fantasy")
     object TeamDetail : Screen("team/{teamId}") {
@@ -32,6 +33,12 @@ sealed class BottomNavItem(
         icon = android.R.drawable.ic_menu_view  // TODO: Replace with proper icon
     )
 
+    object Standings : BottomNavItem(
+        route = Screen.Standings.route,
+        title = "Standings",
+        icon = android.R.drawable.ic_menu_sort_by_size  // TODO: Replace with proper icon
+    )
+
     object Predictions : BottomNavItem(
         route = Screen.Predictions.route,
         title = "Predict",
@@ -47,6 +54,7 @@ sealed class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem.Teams,
+    BottomNavItem.Standings,
     BottomNavItem.Predictions,
     BottomNavItem.Fantasy
 )

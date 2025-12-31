@@ -10,6 +10,11 @@ struct ContentView: View {
                     Label("Teams", systemImage: "list.bullet")
                 }
 
+            StandingsView()
+                .tabItem {
+                    Label("Standings", systemImage: "chart.bar.doc.horizontal")
+                }
+
             PredictionView()
                 .tabItem {
                     Label("Predict", systemImage: "chart.bar.fill")

@@ -210,3 +210,63 @@ data class PredictionResult(
     val reasoning: String,
     val vegasOdds: VegasOddsDTO?
 )
+
+/**
+ * Team Standings
+ * Team standings information calculated from game results
+ */
+@Serializable
+data class TeamStandings(
+    val team: TeamDTO,
+    val wins: Int,
+    val losses: Int,
+    val ties: Int,
+    @SerializedName("win_percentage")
+    val winPercentage: Double,
+    @SerializedName("points_for")
+    val pointsFor: Int,
+    @SerializedName("points_against")
+    val pointsAgainst: Int,
+    @SerializedName("division_wins")
+    val divisionWins: Int,
+    @SerializedName("division_losses")
+    val divisionLosses: Int,
+    @SerializedName("conference_wins")
+    val conferenceWins: Int,
+    @SerializedName("conference_losses")
+    val conferenceLosses: Int,
+    val streak: String
+) {
+    val record: String
+        get() = if (ties > 0) "$wins-$losses-$ties" else "$wins-$losses"
+}
+
+/**
+ * Division Standings
+ * Standings grouping for a division
+ */
+@Serializable
+data class DivisionStandings(
+    val conference: String,
+    val division: String,
+    val teams: List<TeamStandings>
+)
+
+/**
+ * League Standings
+ * Complete league standings organized by division
+ */
+@Serializable
+data class LeagueStandings(
+    val season: Int,
+    val week: Int? = null,
+    @SerializedName("last_updated")
+    val lastUpdated: String,
+    val divisions: List<DivisionStandings>
+) {
+    val afcStandings: List<DivisionStandings>
+        get() = divisions.filter { it.conference == "AFC" }
+
+    val nfcStandings: List<DivisionStandings>
+        get() = divisions.filter { it.conference == "NFC" }
+}

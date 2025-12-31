@@ -301,4 +301,141 @@ final class APIClient: ObservableObject {
             throw error
         }
     }
+
+    /// Fetches and calculates league standings from all team games.
+    func fetchStandings(season: Int? = nil) async throws -> LeagueStandings {
+        let requestSeason = season ?? Calendar.current.component(.year, from: Date())
+
+        // Fetch all teams
+        let teams = try await fetchTeams()
+
+        // Fetch games for all teams in parallel
+        let teamStandings = try await withThrowingTaskGroup(of: (TeamDTO, [GameDTO]).self) { group in
+            for team in teams {
+                group.addTask {
+                    let games = try await self.fetchTeamGames(teamAbbreviation: team.abbreviation, season: requestSeason)
+                    return (team, games)
+                }
+            }
+
+            var standings: [TeamStandings] = []
+            for try await (team, games) in group {
+                let teamStanding = self.calculateTeamStandings(team: team, games: games)
+                standings.append(teamStanding)
+            }
+            return standings
+        }
+
+        // Group by conference and division
+        let divisions = Dictionary(grouping: teamStandings) { standing in
+            "\(standing.team.conference)-\(standing.team.division)"
+        }
+        .map { key, teams in
+            let sorted = teams.sorted { ($0.winPercentage, $0.wins) > ($1.winPercentage, $1.wins) }
+            let conference = sorted.first?.team.conference ?? ""
+            let division = sorted.first?.team.division ?? ""
+            return DivisionStandings(conference: conference, division: division, teams: sorted)
+        }
+        .sorted { ($0.conference, $0.division) < ($1.conference, $1.division) }
+
+        return LeagueStandings(
+            season: requestSeason,
+            week: nil,
+            lastUpdated: Date(),
+            divisions: divisions
+        )
+    }
+
+    // MARK: - Private Helpers
+
+    /// Calculates standings for a single team from their games.
+    private func calculateTeamStandings(team: TeamDTO, games: [GameDTO]) -> TeamStandings {
+        var wins = 0
+        var losses = 0
+        var ties = 0
+        var pointsFor = 0
+        var pointsAgainst = 0
+        var divisionWins = 0
+        var divisionLosses = 0
+        var conferenceWins = 0
+        var conferenceLosses = 0
+        var recentResults: [String] = []
+
+        // Only count completed games
+        let completedGames = games.filter { $0.homeScore != nil && $0.awayScore != nil }
+
+        for game in completedGames {
+            let isHome = game.homeTeam.abbreviation == team.abbreviation
+            let teamScore = isHome ? game.homeScore! : game.awayScore!
+            let opponentScore = isHome ? game.awayScore! : game.homeScore!
+            let opponent = isHome ? game.awayTeam : game.homeTeam
+
+            pointsFor += teamScore
+            pointsAgainst += opponentScore
+
+            // Determine result
+            if teamScore > opponentScore {
+                wins += 1
+                recentResults.append("W")
+
+                if opponent.division == team.division {
+                    divisionWins += 1
+                }
+                if opponent.conference == team.conference {
+                    conferenceWins += 1
+                }
+            } else if teamScore < opponentScore {
+                losses += 1
+                recentResults.append("L")
+
+                if opponent.division == team.division {
+                    divisionLosses += 1
+                }
+                if opponent.conference == team.conference {
+                    conferenceLosses += 1
+                }
+            } else {
+                ties += 1
+                recentResults.append("T")
+            }
+        }
+
+        // Calculate win percentage
+        let totalGames = wins + losses + ties
+        let winPercentage = totalGames > 0 ? Double(wins) + (Double(ties) * 0.5) / Double(totalGames) : 0.0
+
+        // Calculate streak from most recent games
+        let streak = calculateStreak(results: recentResults.suffix(5))
+
+        return TeamStandings(
+            team: team,
+            wins: wins,
+            losses: losses,
+            ties: ties,
+            winPercentage: winPercentage,
+            pointsFor: pointsFor,
+            pointsAgainst: pointsAgainst,
+            divisionWins: divisionWins,
+            divisionLosses: divisionLosses,
+            conferenceWins: conferenceWins,
+            conferenceLosses: conferenceLosses,
+            streak: streak
+        )
+    }
+
+    /// Calculates the current win/loss streak.
+    private func calculateStreak(results: ArraySlice<String>) -> String {
+        guard let mostRecent = results.last else { return "-" }
+
+        var count = 0
+        for result in results.reversed() {
+            if result == mostRecent {
+                count += 1
+            } else {
+                break
+            }
+        }
+
+        return "\(mostRecent)\(count)"
+    }
 }
