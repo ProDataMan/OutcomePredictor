@@ -138,9 +138,9 @@ fun FeedbackDialog(
                         enabled = !isSubmitting
                     )
 
-                    if (errorMessage != null) {
+                    errorMessage?.let {
                         Text(
-                            text = errorMessage!!,
+                            text = it,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -340,13 +340,15 @@ fun AdminFeedbackScreen(
                             }
                         }
 
-                        if (uiState.error != null && uiState.error.contains("401") || uiState.error?.contains("unauthorized") == true) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Invalid admin credentials",
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        uiState.error?.let { error ->
+                            if (error.contains("401") || error.contains("unauthorized", ignoreCase = true)) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Invalid admin credentials",
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
@@ -374,11 +376,13 @@ fun AdminFeedbackScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = uiState.error ?: "Unknown error",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        uiState.error?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -503,7 +507,7 @@ fun FeedbackItem(
                 ) {
                     Icon(
                         imageVector = if (feedback.platform == "iOS") {
-                            Icons.Default.Apple
+                            Icons.Default.PhoneIphone
                         } else {
                             Icons.Default.Android
                         },

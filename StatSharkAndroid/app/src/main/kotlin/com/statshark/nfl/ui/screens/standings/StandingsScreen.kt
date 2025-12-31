@@ -4,9 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -19,8 +16,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.statshark.nfl.data.model.DivisionStandings
-import com.statshark.nfl.ui.components.FeedbackButton
 
 /**
  * Standings Screen
@@ -33,10 +31,7 @@ fun StandingsScreen(
     viewModel: StandingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val pullRefreshState = rememberPullRefreshState(
-        refreshing = uiState.isLoading,
-        onRefresh = { viewModel.loadStandings() }
-    )
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = uiState.isLoading)
 
     Scaffold(
         topBar = {
@@ -47,7 +42,6 @@ fun StandingsScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
-                    FeedbackButton(pageName = "Standings")
                     IconButton(onClick = { viewModel.retry() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }
@@ -55,11 +49,10 @@ fun StandingsScreen(
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .pullRefresh(pullRefreshState)
+        SwipeRefresh(
+            state = swipeRefreshState,
+            onRefresh = { viewModel.loadStandings() },
+            modifier = Modifier.padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Conference Selector
@@ -141,12 +134,6 @@ fun StandingsScreen(
                     }
                 }
             }
-
-            PullRefreshIndicator(
-                refreshing = uiState.isLoading,
-                state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
         }
     }
 }

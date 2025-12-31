@@ -52,8 +52,15 @@ class FantasyViewModel @Inject constructor(
     private val _allPositionPlayers = MutableStateFlow<List<Pair<PlayerDTO, TeamDTO>>>(emptyList())
     val allPositionPlayers: StateFlow<List<Pair<PlayerDTO, TeamDTO>>> = _allPositionPlayers.asStateFlow()
 
+    private val _currentWeek = MutableStateFlow<Int?>(null)
+    val currentWeek: StateFlow<Int?> = _currentWeek.asStateFlow()
+
+    private val _currentSeason = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
+    val currentSeason: StateFlow<Int> = _currentSeason.asStateFlow()
+
     init {
         loadTeams()
+        loadCurrentWeek()
     }
 
     private fun loadTeams() {
@@ -69,6 +76,22 @@ class FantasyViewModel @Inject constructor(
                         isLoadingTeams = false,
                         error = "Failed to load teams: ${it.message}"
                     )
+                }
+            )
+        }
+    }
+
+    private fun loadCurrentWeek() {
+        viewModelScope.launch {
+            repository.getCurrentWeekGames().fold(
+                onSuccess = { response ->
+                    _currentWeek.value = response.currentWeek
+                    _currentSeason.value = response.currentSeason
+                },
+                onFailure = {
+                    // If we can't fetch current week, just use the current year
+                    _currentWeek.value = null
+                    _currentSeason.value = Calendar.getInstance().get(Calendar.YEAR)
                 }
             )
         }

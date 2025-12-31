@@ -327,8 +327,7 @@ class NFLRepository @Inject constructor(
         feedbackText: String
     ): Result<FeedbackDTO> = withContext(Dispatchers.IO) {
         try {
-            val appVersion = context.packageManager
-                .getPackageInfo(context.packageName, 0).versionName
+            val appVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName
             val deviceModel = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
 
             val submission = FeedbackSubmissionDTO(

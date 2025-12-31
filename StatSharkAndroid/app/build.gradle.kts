@@ -35,7 +35,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -52,6 +51,12 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    val outputFileName = "StatShark-${variant.versionName}.apk"
+                    output.outputFileName = outputFileName
+                }
+            }
         }
     }
 
@@ -76,6 +81,16 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    applicationVariants.all { variant ->
+        if (variant.buildType.name == "release") {
+            variant.outputs.all { output ->
+                val newPath = "/Users/baysideuser/GitRepos/OutcomePredictor/Android"
+                val newFile = File(newPath, output.outputFile.name)
+                output.outputFile = newFile
+            }
         }
     }
 }
