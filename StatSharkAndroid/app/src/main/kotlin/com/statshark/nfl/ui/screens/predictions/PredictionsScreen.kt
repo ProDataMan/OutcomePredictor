@@ -459,19 +459,70 @@ fun PredictionResult(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Win Probabilities
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            ProbabilityChip(
-                team = game.awayTeam.abbreviation,
-                probability = prediction.awayWinProbability
+        // Win Probability Bar
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Win Probability",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
             )
-            ProbabilityChip(
-                team = game.homeTeam.abbreviation,
-                probability = prediction.homeWinProbability
-            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${(prediction.awayWinProbability * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.width(40.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(24.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(prediction.awayWinProbability.toFloat())
+                            .background(Color(0xFF2196F3)) // Blue for away
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(prediction.homeWinProbability.toFloat())
+                            .background(Color(0xFFF44336)) // Red for home
+                    )
+                }
+
+                Text(
+                    text = "${(prediction.homeWinProbability * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.width(40.dp),
+                    textAlign = TextAlign.End
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = game.awayTeam.abbreviation,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                )
+                Text(
+                    text = game.homeTeam.abbreviation,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -493,6 +544,142 @@ fun PredictionResult(
             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
         )
 
+        // Vegas Odds if available
+        prediction.vegasOdds?.let { odds ->
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFFFF9800).copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(android.R.drawable.ic_dialog_info),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color(0xFFFF9800)
+                        )
+                        Text(
+                            text = "Vegas Odds",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        odds.bookmaker?.let { bookmaker ->
+                            Text(
+                                text = "• $bookmaker",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Moneyline
+                    if (odds.homeMoneyline != null && odds.awayMoneyline != null) {
+                        Column {
+                            Text(
+                                text = "Moneyline",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = "${game.awayTeam.abbreviation}: ${if (odds.awayMoneyline > 0) "+" else ""}${odds.awayMoneyline}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = "${game.homeTeam.abbreviation}: ${if (odds.homeMoneyline > 0) "+" else ""}${odds.homeMoneyline}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    // Spread
+                    odds.spread?.let { spread ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Spread:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                text = "${game.homeTeam.abbreviation} ${if (spread > 0) "+" else ""}${String.format("%.1f", spread)}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    // Over/Under
+                    odds.total?.let { total ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Over/Under:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                text = String.format("%.1f", total),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    // AI vs Vegas comparison
+                    if (odds.homeImpliedProbability != null && odds.awayImpliedProbability != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "AI vs Vegas",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = "${game.homeTeam.abbreviation}:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    modifier = Modifier.width(35.dp)
+                                )
+                                Text(
+                                    text = "AI: ${(prediction.homeWinProbability * 100).toInt()}% | Vegas: ${(odds.homeImpliedProbability * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = "${game.awayTeam.abbreviation}:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    modifier = Modifier.width(35.dp)
+                                )
+                                Text(
+                                    text = "AI: ${(prediction.awayWinProbability * 100).toInt()}% | Vegas: ${(odds.awayImpliedProbability * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Reasoning
@@ -508,49 +695,6 @@ fun PredictionResult(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
         )
-
-        // Vegas Odds if available
-        prediction.vegasOdds?.let { odds ->
-            Spacer(modifier = Modifier.height(12.dp))
-            Divider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.3f))
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Vegas Odds",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                odds.homeMoneyline?.let {
-                    Text(
-                        text = "Home: ${if (it > 0) "+" else ""}$it",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
-                    )
-                }
-                odds.awayMoneyline?.let {
-                    Text(
-                        text = "Away: ${if (it > 0) "+" else ""}$it",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
-                    )
-                }
-            }
-
-            odds.spread?.let { spread ->
-                Text(
-                    text = "Spread: ${if (spread > 0) "+" else ""}$spread",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                )
-            }
-        }
     }
 }
 

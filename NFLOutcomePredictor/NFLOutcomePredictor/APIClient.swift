@@ -177,7 +177,12 @@ final class APIClient: ObservableObject {
                 predictedWinner: predictionDTO.homeWinProbability > predictionDTO.awayWinProbability ? home : away,
                 confidence: predictionDTO.confidence,
                 reasoning: predictionDTO.reasoning,
-                modelVersion: "Production API v2.0"
+                modelVersion: "Production API v2.0",
+                vegasOdds: predictionDTO.vegasOdds,
+                homeWinProbability: predictionDTO.homeWinProbability,
+                awayWinProbability: predictionDTO.awayWinProbability,
+                predictedHomeScore: predictionDTO.predictedHomeScore,
+                predictedAwayScore: predictionDTO.predictedAwayScore
             )
         } catch {
             if let urlErr = error as? URLError, urlErr.code == .cancelled {

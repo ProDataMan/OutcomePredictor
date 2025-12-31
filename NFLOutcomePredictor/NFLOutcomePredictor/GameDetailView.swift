@@ -518,7 +518,7 @@ struct GameDetailView: View {
                     .frame(maxWidth: .infinity)
             } else if let prediction = prediction {
                 VStack(spacing: 16) {
-                    // Winner display
+                    // Winner display with predicted score
                     VStack(spacing: 8) {
                         TeamIconView(teamAbbreviation: prediction.predictedWinner, size: 60)
 
@@ -529,10 +529,161 @@ struct GameDetailView: View {
                         Text("Predicted Winner: \(prediction.predictedWinner)")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+
+                        // Predicted score if available
+                        if let homeScore = prediction.predictedHomeScore,
+                           let awayScore = prediction.predictedAwayScore {
+                            Text("Predicted Score: \(awayScore) - \(homeScore)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .padding()
                     .background(Color.green.opacity(0.1))
                     .cornerRadius(12)
+
+                    // Probability comparison bar
+                    if let homeProb = prediction.homeWinProbability,
+                       let awayProb = prediction.awayWinProbability {
+                        VStack(spacing: 8) {
+                            Text("Win Probability")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+
+                            HStack(spacing: 0) {
+                                // Away team
+                                Text("\(Int(awayProb * 100))%")
+                                    .font(.caption)
+                                    .frame(width: 40)
+
+                                GeometryReader { geometry in
+                                    HStack(spacing: 0) {
+                                        Rectangle()
+                                            .fill(Color.blue)
+                                            .frame(width: geometry.size.width * awayProb)
+
+                                        Rectangle()
+                                            .fill(Color.red)
+                                            .frame(width: geometry.size.width * homeProb)
+                                    }
+                                }
+                                .frame(height: 24)
+                                .cornerRadius(4)
+
+                                // Home team
+                                Text("\(Int(homeProb * 100))%")
+                                    .font(.caption)
+                                    .frame(width: 40)
+                            }
+
+                            HStack {
+                                Text(game.awayTeam.abbreviation)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(game.homeTeam.abbreviation)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+
+                    // Vegas Odds Comparison
+                    if let vegasOdds = prediction.vegasOdds {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                    .font(.caption)
+                                Text("Vegas Odds")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                if let bookmaker = vegasOdds.bookmaker {
+                                    Text("• \(bookmaker)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+
+                            // Moneyline
+                            if let homeML = vegasOdds.homeMoneyline,
+                               let awayML = vegasOdds.awayMoneyline {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Moneyline")
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                        HStack(spacing: 16) {
+                                            Text("\(game.awayTeam.abbreviation): \(awayML > 0 ? "+" : "")\(awayML)")
+                                                .font(.caption)
+                                            Text("\(game.homeTeam.abbreviation): \(homeML > 0 ? "+" : "")\(homeML)")
+                                                .font(.caption)
+                                        }
+                                    }
+                                    Spacer()
+                                }
+                            }
+
+                            // Spread
+                            if let spread = vegasOdds.spread {
+                                HStack {
+                                    Text("Spread:")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text("\(game.homeTeam.abbreviation) \(spread > 0 ? "+" : "")\(String(format: "%.1f", spread))")
+                                        .font(.caption)
+                                    Spacer()
+                                }
+                            }
+
+                            // Over/Under
+                            if let total = vegasOdds.total {
+                                HStack {
+                                    Text("Over/Under:")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text("\(String(format: "%.1f", total))")
+                                        .font(.caption)
+                                    Spacer()
+                                }
+                            }
+
+                            // AI vs Vegas comparison
+                            if let homeImplied = vegasOdds.homeImpliedProbability,
+                               let awayImplied = vegasOdds.awayImpliedProbability,
+                               let aiHomeProb = prediction.homeWinProbability,
+                               let aiAwayProb = prediction.awayWinProbability {
+                                Divider()
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("AI vs Vegas")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(game.homeTeam.abbreviation)
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                            Text("AI: \(Int(aiHomeProb * 100))% | Vegas: \(Int(homeImplied * 100))%")
+                                                .font(.caption2)
+                                        }
+                                        Spacer()
+                                    }
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(game.awayTeam.abbreviation)
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                            Text("AI: \(Int(aiAwayProb * 100))% | Vegas: \(Int(awayImplied * 100))%")
+                                                .font(.caption2)
+                                        }
+                                        Spacer()
+                                    }
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
+                    }
 
                     // AI Analysis
                     if let reasoning = prediction.reasoning {

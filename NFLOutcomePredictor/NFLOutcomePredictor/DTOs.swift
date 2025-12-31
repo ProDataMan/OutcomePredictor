@@ -179,17 +179,32 @@ public struct PredictionResult: Codable, Sendable {
     public let confidence: Double
     public let reasoning: String?
     public let modelVersion: String?
+    public let vegasOdds: VegasOddsDTO?
+    public let homeWinProbability: Double?
+    public let awayWinProbability: Double?
+    public let predictedHomeScore: Int?
+    public let predictedAwayScore: Int?
 
     public init(
         predictedWinner: String,
         confidence: Double,
         reasoning: String? = nil,
-        modelVersion: String? = nil
+        modelVersion: String? = nil,
+        vegasOdds: VegasOddsDTO? = nil,
+        homeWinProbability: Double? = nil,
+        awayWinProbability: Double? = nil,
+        predictedHomeScore: Int? = nil,
+        predictedAwayScore: Int? = nil
     ) {
         self.predictedWinner = predictedWinner
         self.confidence = confidence
         self.reasoning = reasoning
         self.modelVersion = modelVersion
+        self.vegasOdds = vegasOdds
+        self.homeWinProbability = homeWinProbability
+        self.awayWinProbability = awayWinProbability
+        self.predictedHomeScore = predictedHomeScore
+        self.predictedAwayScore = predictedAwayScore
     }
 }
 
