@@ -310,4 +310,92 @@ class NFLRepository @Inject constructor(private val apiService: StatSharkApiServ
 
         return "$mostRecent$count"
     }
+
+    // MARK: - Feedback Methods
+
+    /**
+     * Submit user feedback
+     */
+    suspend fun submitFeedback(
+        userId: String,
+        page: String,
+        feedbackText: String
+    ): Result<FeedbackDTO> = withContext(Dispatchers.IO) {
+        try {
+            val appVersion = context.packageManager
+                .getPackageInfo(context.packageName, 0).versionName
+            val deviceModel = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+
+            val submission = FeedbackSubmissionDTO(
+                userId = userId,
+                page = page,
+                platform = "Android",
+                feedbackText = feedbackText,
+                appVersion = appVersion,
+                deviceModel = deviceModel
+            )
+
+            val response = apiService.submitFeedback(submission)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Failed to submit feedback: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Fetch all feedback (admin only)
+     */
+    suspend fun fetchFeedback(userId: String): Result<List<FeedbackDTO>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getFeedback(userId)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception("Failed to fetch feedback: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Fetch unread feedback count (admin only)
+     */
+    suspend fun fetchUnreadCount(userId: String): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getUnreadCount(userId)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.unreadCount)
+            } else {
+                Result.failure(Exception("Failed to fetch unread count: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Mark feedback as read
+     */
+    suspend fun markFeedbackAsRead(feedbackIds: List<String>): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val request = MarkFeedbackReadDTO(feedbackIds)
+            val response = apiService.markFeedbackAsRead(request)
+
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Failed to mark feedback as read: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

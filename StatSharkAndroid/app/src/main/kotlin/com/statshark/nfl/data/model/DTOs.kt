@@ -270,3 +270,62 @@ data class LeagueStandings(
     val nfcStandings: List<DivisionStandings>
         get() = divisions.filter { it.conference == "NFC" }
 }
+
+// MARK: - Feedback DTOs
+
+/**
+ * Feedback submission request
+ */
+@Serializable
+data class FeedbackSubmissionDTO(
+    @SerializedName("user_id")
+    val userId: String,
+    val page: String,
+    val platform: String,
+    @SerializedName("feedback_text")
+    val feedbackText: String,
+    @SerializedName("app_version")
+    val appVersion: String? = null,
+    @SerializedName("device_model")
+    val deviceModel: String? = null
+)
+
+/**
+ * Feedback response DTO
+ */
+@Serializable
+data class FeedbackDTO(
+    val id: String,
+    @SerializedName("user_id")
+    val userId: String,
+    val page: String,
+    val platform: String,
+    @SerializedName("feedback_text")
+    val feedbackText: String,
+    @SerializedName("app_version")
+    val appVersion: String? = null,
+    @SerializedName("device_model")
+    val deviceModel: String? = null,
+    @SerializedName("created_at")
+    val createdAt: String,
+    @SerializedName("is_read")
+    val isRead: Boolean
+)
+
+/**
+ * Mark feedback as read request
+ */
+@Serializable
+data class MarkFeedbackReadDTO(
+    @SerializedName("feedback_ids")
+    val feedbackIds: List<String>
+)
+
+/**
+ * Unread count response
+ */
+@Serializable
+data class UnreadCountResponse(
+    @SerializedName("unread_count")
+    val unreadCount: Int
+)

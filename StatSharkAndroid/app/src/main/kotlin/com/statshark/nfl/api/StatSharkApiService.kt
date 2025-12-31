@@ -1,6 +1,7 @@
 package com.statshark.nfl.api
 
 import com.statshark.nfl.data.model.*
+import retrofit2.Response
 import retrofit2.http.*
 
 /**
@@ -43,6 +44,27 @@ interface StatSharkApiService {
     suspend fun makePrediction(
         @Body request: PredictionRequest
     ): PredictionDTO
+
+    // Feedback endpoints
+    @POST("feedback")
+    suspend fun submitFeedback(
+        @Body submission: FeedbackSubmissionDTO
+    ): Response<FeedbackDTO>
+
+    @GET("feedback")
+    suspend fun getFeedback(
+        @Query("userId") userId: String
+    ): Response<List<FeedbackDTO>>
+
+    @GET("feedback/unread")
+    suspend fun getUnreadCount(
+        @Query("userId") userId: String
+    ): Response<UnreadCountResponse>
+
+    @POST("feedback/mark-read")
+    suspend fun markFeedbackAsRead(
+        @Body request: MarkFeedbackReadDTO
+    ): Response<Unit>
 }
 
 /**
