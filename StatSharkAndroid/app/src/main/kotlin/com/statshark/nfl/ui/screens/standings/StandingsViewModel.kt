@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.*
 import javax.inject.Inject
 
 /**
@@ -53,11 +54,21 @@ class StandingsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            // TODO: Implement repository.getStandings() when backend endpoint is available
-            // For now, show a placeholder message
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                error = "Standings feature coming soon! View standings data in the iOS app for now."
+            val currentSeason = Calendar.getInstance().get(Calendar.YEAR)
+            repository.getStandings(currentSeason).fold(
+                onSuccess = { standings ->
+                    _uiState.value = _uiState.value.copy(
+                        standings = standings,
+                        isLoading = false,
+                        error = null
+                    )
+                },
+                onFailure = { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = exception.message ?: "Failed to load standings"
+                    )
+                }
             )
         }
     }
