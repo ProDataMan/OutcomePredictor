@@ -44,12 +44,22 @@ struct TeamsListView: View {
     @StateObject private var dataManager = DataManager.shared
     @State private var error: String?
     @State private var selectedConference: String = "All"
+    @State private var searchText: String = ""
 
     private let conferences = ["All", "NFC", "AFC"]
 
     var filteredTeams: [TeamDTO] {
         let teams = dataManager.teams
-        let filtered = selectedConference == "All" ? teams : teams.filter { $0.conference == selectedConference }
+        var filtered = selectedConference == "All" ? teams : teams.filter { $0.conference == selectedConference }
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.abbreviation.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
         return filtered.sorted { $0.name < $1.name }
     }
 
@@ -104,6 +114,7 @@ struct TeamsListView: View {
                     .refreshable {
                         await dataManager.loadTeams(forceReload: true)
                     }
+                    .searchable(text: $searchText, prompt: "Search teams")
                 }
             }
             .navigationTitle("NFL Teams")

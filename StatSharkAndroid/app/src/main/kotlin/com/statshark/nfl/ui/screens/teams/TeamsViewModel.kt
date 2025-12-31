@@ -19,7 +19,8 @@ data class TeamsUiState(
     val filteredTeams: List<TeamDTO> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val selectedFilter: ConferenceFilter = ConferenceFilter.ALL
+    val selectedFilter: ConferenceFilter = ConferenceFilter.ALL,
+    val searchQuery: String = ""
 )
 
 /**
@@ -56,7 +57,7 @@ class TeamsViewModel @Inject constructor(
                 onSuccess = { teams ->
                     _uiState.value = _uiState.value.copy(
                         teams = teams.sortedBy { it.name },
-                        filteredTeams = filterTeams(teams, _uiState.value.selectedFilter),
+                        filteredTeams = applyFilters(teams, _uiState.value.selectedFilter, _uiState.value.searchQuery),
                         isLoading = false
                     )
                 },
@@ -76,20 +77,41 @@ class TeamsViewModel @Inject constructor(
     fun setFilter(filter: ConferenceFilter) {
         _uiState.value = _uiState.value.copy(
             selectedFilter = filter,
-            filteredTeams = filterTeams(_uiState.value.teams, filter)
+            filteredTeams = applyFilters(_uiState.value.teams, filter, _uiState.value.searchQuery)
         )
     }
 
     /**
-     * Filter teams by conference
+     * Update search query
      */
-    private fun filterTeams(teams: List<TeamDTO>?, filter: ConferenceFilter): List<TeamDTO> {
+    fun setSearchQuery(query: String) {
+        _uiState.value = _uiState.value.copy(
+            searchQuery = query,
+            filteredTeams = applyFilters(_uiState.value.teams, _uiState.value.selectedFilter, query)
+        )
+    }
+
+    /**
+     * Apply filters and search to teams
+     */
+    private fun applyFilters(teams: List<TeamDTO>?, filter: ConferenceFilter, searchQuery: String): List<TeamDTO> {
         if (teams == null) return emptyList()
-        return when (filter) {
-            ConferenceFilter.ALL -> teams.sortedBy { it.name }
-            ConferenceFilter.NFC -> teams.filter { it.conference == "NFC" }.sortedBy { it.name }
-            ConferenceFilter.AFC -> teams.filter { it.conference == "AFC" }.sortedBy { it.name }
+
+        var filtered = when (filter) {
+            ConferenceFilter.ALL -> teams
+            ConferenceFilter.NFC -> teams.filter { it.conference == "NFC" }
+            ConferenceFilter.AFC -> teams.filter { it.conference == "AFC" }
         }
+
+        // Apply search
+        if (searchQuery.isNotBlank()) {
+            filtered = filtered.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                it.abbreviation.contains(searchQuery, ignoreCase = true)
+            }
+        }
+
+        return filtered.sortedBy { it.name }
     }
 
     /**
