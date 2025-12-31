@@ -1,6 +1,6 @@
 import Foundation
 
-/// Enhanced predictor incorporating injuries, news sentiment, head-to-head history, and home/away performance.
+/// Enhanced predictor incorporating injuries, news sentiment, head-to-head history, home/away performance, and weather.
 ///
 /// This predictor combines multiple data sources:
 /// - Historical win rates (overall and head-to-head)
@@ -8,15 +8,18 @@ import Foundation
 /// - Injury impact assessment
 /// - News sentiment analysis (player-affecting events)
 /// - Home vs away performance splits
+/// - Weather conditions impact on game style
 public struct EnhancedPredictor: GamePredictor {
     private let gameRepository: GameRepository
     private let injuryTracker: InjuryTracker?
     private let newsAnalyzer: NewsAnalyzer?
+    private let weatherService: WeatherService?
     private let homeFieldAdvantage: Double
     private let injuryImpactWeight: Double
     private let newsSentimentWeight: Double
     private let headToHeadWeight: Double
     private let homeAwayWeight: Double
+    private let weatherImpactWeight: Double
 
     /// Creates an enhanced predictor with configurable weights.
     ///
@@ -24,29 +27,35 @@ public struct EnhancedPredictor: GamePredictor {
     ///   - gameRepository: Repository for historical game data
     ///   - injuryTracker: Optional injury tracking service
     ///   - newsAnalyzer: Optional news sentiment analyzer
+    ///   - weatherService: Optional weather forecast service
     ///   - homeFieldAdvantage: Base probability boost for home team (default: 0.06)
     ///   - injuryImpactWeight: Weight for injury impact (default: 0.15)
     ///   - newsSentimentWeight: Weight for news sentiment (default: 0.08)
     ///   - headToHeadWeight: Weight for head-to-head history (default: 0.25)
     ///   - homeAwayWeight: Weight for home/away splits (default: 0.12)
+    ///   - weatherImpactWeight: Weight for weather conditions (default: 0.12)
     public init(
         gameRepository: GameRepository,
         injuryTracker: InjuryTracker? = nil,
         newsAnalyzer: NewsAnalyzer? = nil,
+        weatherService: WeatherService? = nil,
         homeFieldAdvantage: Double = 0.06,
         injuryImpactWeight: Double = 0.15,
         newsSentimentWeight: Double = 0.08,
         headToHeadWeight: Double = 0.25,
-        homeAwayWeight: Double = 0.12
+        homeAwayWeight: Double = 0.12,
+        weatherImpactWeight: Double = 0.12
     ) {
         self.gameRepository = gameRepository
         self.injuryTracker = injuryTracker
         self.newsAnalyzer = newsAnalyzer
+        self.weatherService = weatherService
         self.homeFieldAdvantage = homeFieldAdvantage
         self.injuryImpactWeight = injuryImpactWeight
         self.newsSentimentWeight = newsSentimentWeight
         self.headToHeadWeight = headToHeadWeight
         self.homeAwayWeight = homeAwayWeight
+        self.weatherImpactWeight = weatherImpactWeight
     }
 
     public func predict(game: Game, features: [String: Double]) async throws -> Prediction {
@@ -104,6 +113,20 @@ public struct EnhancedPredictor: GamePredictor {
             )
         }
 
+        // Analyze weather impact
+        var weatherAdjustment = 0.0
+        var weatherDetails = ""
+        if let service = weatherService {
+            (weatherAdjustment, weatherDetails) = await analyzeWeatherImpact(
+                homeTeam: game.homeTeam,
+                awayTeam: game.awayTeam,
+                homeGames: completedHomeGames,
+                awayGames: completedAwayGames,
+                gameDate: game.scheduledDate,
+                service: service
+            )
+        }
+
         // Combine all factors
         var homeWinProbability = (homeWinRate + (1.0 - awayWinRate)) / 2.0
         homeWinProbability += homeFieldAdvantage
@@ -111,6 +134,7 @@ public struct EnhancedPredictor: GamePredictor {
         homeWinProbability += homeAwayAdjustment * homeAwayWeight
         homeWinProbability += injuryAdjustment * injuryImpactWeight
         homeWinProbability += newsSentimentAdjustment * newsSentimentWeight
+        homeWinProbability += weatherAdjustment * weatherImpactWeight
 
         // Clamp to valid range
         homeWinProbability = max(0.0, min(1.0, homeWinProbability))
@@ -121,6 +145,7 @@ public struct EnhancedPredictor: GamePredictor {
             totalGames: completedHomeGames.count + completedAwayGames.count,
             hasInjuryData: injuryTracker != nil,
             hasNewsData: newsAnalyzer != nil,
+            hasWeatherData: weatherService != nil,
             headToHeadGames: await countHeadToHeadGames(homeTeam: game.homeTeam, awayTeam: game.awayTeam, season: game.season)
         )
 
@@ -144,6 +169,7 @@ public struct EnhancedPredictor: GamePredictor {
             homeAwayAdjustment: homeAwayAdjustment,
             injuryDetails: injuryDetails,
             newsDetails: newsDetails,
+            weatherDetails: weatherDetails,
             confidence: confidence
         )
 
@@ -305,6 +331,79 @@ public struct EnhancedPredictor: GamePredictor {
         return (adjustment, details)
     }
 
+    // MARK: - Weather Impact Analysis
+
+    private func analyzeWeatherImpact(
+        homeTeam: Team,
+        awayTeam: Team,
+        homeGames: [Game],
+        awayGames: [Game],
+        gameDate: Date,
+        service: WeatherService
+    ) async -> (adjustment: Double, details: String) {
+        do {
+            // Get location from home team
+            let location = homeTeam.name.components(separatedBy: " ").last ?? homeTeam.name
+
+            // Fetch weather
+            let weather = try await service.fetchWeather(for: location, at: gameDate)
+
+            // Calculate team playing styles (pass vs run ratio)
+            let homePassRatio = calculatePassRatio(for: homeTeam, in: homeGames)
+            let awayPassRatio = calculatePassRatio(for: awayTeam, in: awayGames)
+
+            // Determine if home team is from a dome
+            let homeTeamIsFromDome = isDomeTeam(homeTeam)
+
+            // Calculate weather impact
+            let adjustment = weather.calculateWeatherImpact(
+                homeTeamPassRatio: homePassRatio,
+                awayTeamPassRatio: awayPassRatio,
+                homeTeamIsFromDome: homeTeamIsFromDome
+            )
+
+            let details = weather.impactSummary
+
+            return (adjustment, details)
+        } catch {
+            // If weather data unavailable, return no impact
+            return (0.0, "")
+        }
+    }
+
+    private func calculatePassRatio(for team: Team, in games: [Game]) -> Double {
+        // Estimate pass ratio from scoring (higher scoring teams tend to pass more)
+        // This is a simplification - ideally we'd have play-by-play data
+        guard !games.isEmpty else { return 0.55 } // NFL average
+
+        let recentGames = Array(games.suffix(8))
+        let totalScore = recentGames.compactMap { game -> Int? in
+            guard let outcome = game.outcome else { return nil }
+            if game.homeTeam.id == team.id {
+                return outcome.homeScore
+            } else if game.awayTeam.id == team.id {
+                return outcome.awayScore
+            }
+            return nil
+        }.reduce(0, +)
+
+        let avgScore = Double(totalScore) / Double(recentGames.count)
+
+        // Higher scoring teams generally pass more
+        // NFL avg is ~24 ppg, ~55% pass ratio
+        // Adjust by 1% per point above/below average
+        let passRatio = 0.55 + ((avgScore - 24.0) * 0.01)
+
+        return max(0.40, min(0.70, passRatio))
+    }
+
+    private func isDomeTeam(_ team: Team) -> Bool {
+        // Teams that play in domes/retractable roof stadiums
+        let domeTeams = ["Falcons", "Cowboys", "Lions", "Texans", "Colts",
+                         "Saints", "Raiders", "Vikings", "Cardinals"]
+        return domeTeams.contains { team.name.contains($0) }
+    }
+
     // MARK: - Helper Methods
 
     private func calculateWinRate(for team: Team, in games: [Game]) -> Double {
@@ -345,6 +444,7 @@ public struct EnhancedPredictor: GamePredictor {
         totalGames: Int,
         hasInjuryData: Bool,
         hasNewsData: Bool,
+        hasWeatherData: Bool,
         headToHeadGames: Int
     ) -> Double {
         // Sample size factor (0.0 to 0.3)
@@ -354,14 +454,15 @@ public struct EnhancedPredictor: GamePredictor {
         let distanceFrom50 = abs(homeWinProbability - 0.5)
         let certaintyFactor = min(0.3, distanceFrom50 * 0.6)
 
-        // Data richness factor (0.0 to 0.2)
+        // Data richness factor (0.0 to 0.25)
         var dataRichness = 0.0
-        if hasInjuryData { dataRichness += 0.07 }
-        if hasNewsData { dataRichness += 0.06 }
+        if hasInjuryData { dataRichness += 0.06 }
+        if hasNewsData { dataRichness += 0.05 }
+        if hasWeatherData { dataRichness += 0.07 }
         if headToHeadGames > 0 { dataRichness += 0.07 }
 
-        // Head-to-head experience (0.0 to 0.2)
-        let h2hFactor = min(0.2, Double(headToHeadGames) / 10.0)
+        // Head-to-head experience (0.0 to 0.15)
+        let h2hFactor = min(0.15, Double(headToHeadGames) / 10.0)
 
         let confidence = sampleSizeFactor + certaintyFactor + dataRichness + h2hFactor
         return min(1.0, max(0.0, confidence))
@@ -378,6 +479,7 @@ public struct EnhancedPredictor: GamePredictor {
         homeAwayAdjustment: Double,
         injuryDetails: String,
         newsDetails: String,
+        weatherDetails: String,
         confidence: Double
     ) -> String {
         var reasoning = """
@@ -401,6 +503,10 @@ public struct EnhancedPredictor: GamePredictor {
             } else {
                 reasoning += "\(awayTeam.name) plays well on road despite home disadvantage.\n"
             }
+        }
+
+        if !weatherDetails.isEmpty {
+            reasoning += "\nWeather Conditions:\n\(weatherDetails)\n"
         }
 
         if !injuryDetails.isEmpty {

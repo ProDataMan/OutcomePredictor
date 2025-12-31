@@ -77,6 +77,19 @@ func configure(_ app: Application) async throws {
         print("   Player stats will use ESPN data (sample stats only)")
     }
 
+    // Setup OpenWeatherMap service for weather-enhanced predictions
+    // Free tier: 1000 calls/day, 5-day forecast
+    let weatherAPIKey = Environment.get("OPENWEATHER_API_KEY")
+    if let apiKey = weatherAPIKey {
+        let weatherService = OpenWeatherMapService(apiKey: apiKey)
+        app.storage[WeatherServiceKey.self] = weatherService
+        print("✅ OpenWeatherMap service initialized for weather-enhanced predictions")
+    } else {
+        print("⚠️ OpenWeatherMap API key not found in environment (OPENWEATHER_API_KEY)")
+        print("   Predictions will not include weather impact analysis")
+        print("   Sign up at: https://openweathermap.org/api (free tier available)")
+    }
+
     // Register routes
     try routes(app)
 }
@@ -99,6 +112,11 @@ struct OddsCacheKey: StorageKey {
 // Storage key for API-Sports DataSource
 struct APISportsDataSourceKey: StorageKey {
     typealias Value = APISportsDataSource
+}
+
+// Storage key for Weather Service
+struct WeatherServiceKey: StorageKey {
+    typealias Value = OpenWeatherMapService
 }
 
 func routes(_ app: Application) throws {
@@ -280,10 +298,14 @@ func routes(_ app: Application) throws {
         let newsDataSource = RealNewsDataSource(dataLoader: dataLoader)
         let newsAnalyzer = NewsAnalyzer(newsDataSource: newsDataSource)
 
+        // Get weather service if available
+        let weatherService = req.application.storage[WeatherServiceKey.self]
+
         let predictor = EnhancedPredictor(
             gameRepository: gameRepo,
             injuryTracker: injuryTracker,
-            newsAnalyzer: newsAnalyzer
+            newsAnalyzer: newsAnalyzer,
+            weatherService: weatherService
         )
 
         // Create game to predict
