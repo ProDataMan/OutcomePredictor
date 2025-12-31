@@ -142,8 +142,8 @@ public actor OpenWeatherMapService: WeatherService {
 
         // Find the forecast closest to game time
         let targetTimestamp = date.timeIntervalSince1970
-        guard let closestForecast = response.list.min(by: { forecast in
-            abs(forecast.dt - targetTimestamp) < abs($1.dt - targetTimestamp)
+        guard let closestForecast = response.list.min(by: { forecast1, forecast2 in
+            abs(forecast1.dt - targetTimestamp) < abs(forecast2.dt - targetTimestamp)
         }) else {
             throw WeatherServiceError.invalidResponse
         }

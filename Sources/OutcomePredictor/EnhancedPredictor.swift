@@ -21,6 +21,7 @@ public struct EnhancedPredictor: GamePredictor {
     private let homeAwayWeight: Double
     private let weatherImpactWeight: Double
     private let restTravelWeight: Double
+    private let recentFormWeight: Double
 
     /// Creates an enhanced predictor with configurable weights.
     ///
@@ -36,6 +37,7 @@ public struct EnhancedPredictor: GamePredictor {
     ///   - homeAwayWeight: Weight for home/away splits (default: 0.12)
     ///   - weatherImpactWeight: Weight for weather conditions (default: 0.12)
     ///   - restTravelWeight: Weight for rest and travel factors (default: 0.12)
+    ///   - recentFormWeight: Weight for momentum and recent form (default: 0.15)
     public init(
         gameRepository: GameRepository,
         injuryTracker: InjuryTracker? = nil,
@@ -47,7 +49,8 @@ public struct EnhancedPredictor: GamePredictor {
         headToHeadWeight: Double = 0.25,
         homeAwayWeight: Double = 0.12,
         weatherImpactWeight: Double = 0.12,
-        restTravelWeight: Double = 0.12
+        restTravelWeight: Double = 0.12,
+        recentFormWeight: Double = 0.15
     ) {
         self.gameRepository = gameRepository
         self.injuryTracker = injuryTracker
@@ -60,6 +63,7 @@ public struct EnhancedPredictor: GamePredictor {
         self.homeAwayWeight = homeAwayWeight
         self.weatherImpactWeight = weatherImpactWeight
         self.restTravelWeight = restTravelWeight
+        self.recentFormWeight = recentFormWeight
     }
 
     public func predict(game: Game, features: [String: Double]) async throws -> Prediction {
@@ -142,6 +146,14 @@ public struct EnhancedPredictor: GamePredictor {
         let restTravelAdjustment = restTravelAnalysis.calculateAdvantage()
         let restTravelDetails = restTravelAnalysis.impactSummary
 
+        // Analyze recent form and momentum
+        let homeFormAnalysis = analyzeRecentForm(for: game.homeTeam, in: completedHomeGames)
+        let awayFormAnalysis = analyzeRecentForm(for: game.awayTeam, in: completedAwayGames)
+        let homeFormAdjustment = homeFormAnalysis.calculateMomentum()
+        let awayFormAdjustment = awayFormAnalysis.calculateMomentum()
+        let recentFormAdjustment = homeFormAdjustment - awayFormAdjustment
+        let recentFormDetails = buildFormDetails(home: homeFormAnalysis, away: awayFormAnalysis, homeTeam: game.homeTeam, awayTeam: game.awayTeam)
+
         // Combine all factors
         var homeWinProbability = (homeWinRate + (1.0 - awayWinRate)) / 2.0
         homeWinProbability += homeFieldAdvantage
@@ -151,6 +163,7 @@ public struct EnhancedPredictor: GamePredictor {
         homeWinProbability += newsSentimentAdjustment * newsSentimentWeight
         homeWinProbability += weatherAdjustment * weatherImpactWeight
         homeWinProbability += restTravelAdjustment * restTravelWeight
+        homeWinProbability += recentFormAdjustment * recentFormWeight
 
         // Clamp to valid range
         homeWinProbability = max(0.0, min(1.0, homeWinProbability))
@@ -187,6 +200,7 @@ public struct EnhancedPredictor: GamePredictor {
             newsDetails: newsDetails,
             weatherDetails: weatherDetails,
             restTravelDetails: restTravelDetails,
+            recentFormDetails: recentFormDetails,
             confidence: confidence
         )
 
@@ -511,6 +525,27 @@ public struct EnhancedPredictor: GamePredictor {
         return consecutiveCount
     }
 
+    private func buildFormDetails(
+        home: RecentFormAnalysis,
+        away: RecentFormAnalysis,
+        homeTeam: Team,
+        awayTeam: Team
+    ) -> String {
+        var details: [String] = []
+
+        let homeImpact = home.impactSummary
+        if homeImpact != "Stable recent performance" {
+            details.append("\(homeTeam.name): \(homeImpact)")
+        }
+
+        let awayImpact = away.impactSummary
+        if awayImpact != "Stable recent performance" {
+            details.append("\(awayTeam.name): \(awayImpact)")
+        }
+
+        return details.isEmpty ? "" : details.joined(separator: "; ")
+    }
+
     // MARK: - Helper Methods
 
     private func calculateWinRate(for team: Team, in games: [Game]) -> Double {
@@ -588,6 +623,7 @@ public struct EnhancedPredictor: GamePredictor {
         newsDetails: String,
         weatherDetails: String,
         restTravelDetails: String,
+        recentFormDetails: String,
         confidence: Double
     ) -> String {
         var reasoning = """
@@ -611,6 +647,10 @@ public struct EnhancedPredictor: GamePredictor {
             } else {
                 reasoning += "\(awayTeam.name) plays well on road despite home disadvantage.\n"
             }
+        }
+
+        if !recentFormDetails.isEmpty {
+            reasoning += "\nRecent Form & Momentum:\n\(recentFormDetails)\n"
         }
 
         if !restTravelDetails.isEmpty && restTravelDetails != "Normal rest and travel conditions" {
