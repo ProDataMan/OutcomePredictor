@@ -443,4 +443,118 @@ final class APIClient: ObservableObject {
 
         return "\(mostRecent)\(count)"
     }
+
+    // MARK: - Feedback API Methods
+
+    /// Submits user feedback to the backend.
+    func submitFeedback(
+        userId: String,
+        page: String,
+        platform: String,
+        feedbackText: String,
+        appVersion: String?,
+        deviceModel: String?
+    ) async throws -> FeedbackDTO {
+        let url = baseURL.appendingPathComponent("/api/v1/feedback")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let submission = FeedbackSubmissionDTO(
+            userId: userId,
+            page: page,
+            platform: platform,
+            feedbackText: feedbackText,
+            appVersion: appVersion,
+            deviceModel: deviceModel
+        )
+
+        request.httpBody = try encoder.encode(submission)
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.httpError(statusCode: httpResponse.statusCode)
+        }
+
+        let feedback = try decoder.decode(FeedbackDTO.self, from: data)
+        return feedback
+    }
+
+    /// Fetches all feedback (admin only).
+    func fetchFeedback(userId: String) async throws -> [FeedbackDTO] {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/api/v1/feedback"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "userId", value: userId)]
+
+        guard let url = components.url else {
+            throw APIError.invalidURL
+        }
+
+        let (data, response) = try await urlSession.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.httpError(statusCode: httpResponse.statusCode)
+        }
+
+        let feedbacks = try decoder.decode([FeedbackDTO].self, from: data)
+        return feedbacks
+    }
+
+    /// Fetches unread feedback count (admin only).
+    func fetchUnreadCount(userId: String) async throws -> Int {
+        var components = URLComponents(url: baseURL.appendingPathComponent("/api/v1/feedback/unread"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "userId", value: userId)]
+
+        guard let url = components.url else {
+            throw APIError.invalidURL
+        }
+
+        let (data, response) = try await urlSession.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.httpError(statusCode: httpResponse.statusCode)
+        }
+
+        struct UnreadCountResponse: Codable {
+            let unreadCount: Int
+        }
+
+        let countResponse = try decoder.decode(UnreadCountResponse.self, from: data)
+        return countResponse.unreadCount
+    }
+
+    /// Marks feedback as read.
+    func markFeedbackAsRead(feedbackIds: [String]) async throws {
+        let url = baseURL.appendingPathComponent("/api/v1/feedback/mark-read")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let markRead = MarkFeedbackReadDTO(feedbackIds: feedbackIds)
+        request.httpBody = try encoder.encode(markRead)
+
+        let (_, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw APIError.httpError(statusCode: httpResponse.statusCode)
+        }
+    }
 }

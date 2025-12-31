@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 /// Shared data manager to coordinate API requests and prevent concurrent calls to the same endpoints.
 /// This prevents URLSession task cancellation issues when multiple views request the same data.
@@ -109,6 +110,42 @@ final class DataManager: ObservableObject {
     /// Makes a prediction using the shared API client.
     func makePrediction(home: String, away: String, season: Int? = nil) async throws -> PredictionResult {
         return try await apiClient.makePrediction(home: home, away: away, season: season)
+    }
+
+    // MARK: - Feedback Methods
+
+    /// Submits user feedback to the backend.
+    func submitFeedback(
+        userId: String,
+        page: String,
+        feedbackText: String
+    ) async throws -> FeedbackDTO {
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        let deviceModel = UIDevice.current.model
+
+        return try await apiClient.submitFeedback(
+            userId: userId,
+            page: page,
+            platform: "iOS",
+            feedbackText: feedbackText,
+            appVersion: appVersion,
+            deviceModel: deviceModel
+        )
+    }
+
+    /// Fetches all feedback (admin only).
+    func fetchFeedback(userId: String) async throws -> [FeedbackDTO] {
+        return try await apiClient.fetchFeedback(userId: userId)
+    }
+
+    /// Fetches unread feedback count (admin only).
+    func fetchUnreadCount(userId: String) async throws -> Int {
+        return try await apiClient.fetchUnreadCount(userId: userId)
+    }
+
+    /// Marks feedback as read.
+    func markFeedbackAsRead(feedbackIds: [String]) async throws {
+        try await apiClient.markFeedbackAsRead(feedbackIds: feedbackIds)
     }
 
     /// Clears all cached data and forces a reload.

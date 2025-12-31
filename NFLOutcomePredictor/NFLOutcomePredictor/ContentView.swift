@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var showDebugMenu = false
+    @State private var showAdminFeedback = false
+    @State private var isAdmin = UserDefaults.standard.string(forKey: "adminUserId") != nil
 
     var body: some View {
         TabView {
@@ -33,9 +35,20 @@ struct ContentView: View {
                 Label("Debug", systemImage: "wrench.and.screwdriver")
             }
             #endif
+
+            // Admin feedback tab (always visible - authentication happens inside)
+            Button("Admin") {
+                showAdminFeedback = true
+            }
+            .tabItem {
+                Label("Admin", systemImage: "shield.lefthalf.filled")
+            }
         }
         .sheet(isPresented: $showDebugMenu) {
             DebugMenu()
+        }
+        .sheet(isPresented: $showAdminFeedback) {
+            AdminFeedbackView()
         }
     }
 }
@@ -113,6 +126,10 @@ struct TeamsListView: View {
             }
             .navigationTitle("NFL Teams")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    FeedbackButton(pageName: "Teams List")
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         Task {
