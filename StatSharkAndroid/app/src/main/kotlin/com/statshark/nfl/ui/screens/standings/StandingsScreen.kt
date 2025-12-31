@@ -3,22 +3,26 @@ package com.statshark.nfl.ui.screens.standings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.statshark.nfl.data.model.DivisionStandings
 
 /**
  * Standings Screen
@@ -71,6 +75,63 @@ fun StandingsScreen(
                         onClick = { viewModel.selectConference("NFC") },
                         text = { Text("NFC") }
                     )
+                }
+
+                // Sort Options
+                var showSortMenu by remember { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Surface(
+                        onClick = { showSortMenu = true },
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Sort by: ${uiState.sortOption.displayName}",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.ArrowDropDown,
+                                contentDescription = "Sort options",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false }
+                    ) {
+                        StandingsSortOption.values().forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(option.displayName)
+                                        if (uiState.sortOption == option) {
+                                            Text("✓", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    viewModel.setSortOption(option)
+                                    showSortMenu = false
+                                }
+                            )
+                        }
+                    }
                 }
 
                 // Content
@@ -149,7 +210,7 @@ fun StandingsScreen(
 }
 
 @Composable
-fun DivisionCard(division: com.statshark.nfl.data.model.DivisionStandings) {
+fun DivisionCard(division: DivisionStandings) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

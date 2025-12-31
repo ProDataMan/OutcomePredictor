@@ -5,10 +5,53 @@ struct StandingsView: View {
     @State private var isLoading = false
     @State private var error: String?
     @State private var selectedConference: Conference = .afc
+    @State private var sortOption: SortOption = .winPercentage
 
     enum Conference: String, CaseIterable {
         case afc = "AFC"
         case nfc = "NFC"
+    }
+
+    enum SortOption: String, CaseIterable {
+        case winPercentage = "Win %"
+        case pointsFor = "Points For"
+        case pointsAgainst = "Points Against"
+        case streak = "Streak"
+    }
+
+    var sortedDivisions: [DivisionStandings] {
+        guard let standings = standings else { return [] }
+        let divisions = selectedConference == .afc ? standings.afcStandings : standings.nfcStandings
+
+        return divisions.map { division in
+            let sortedTeams: [TeamStandings]
+            switch sortOption {
+            case .winPercentage:
+                sortedTeams = division.teams.sorted { ($0.winPercentage, $0.wins) > ($1.winPercentage, $1.wins) }
+            case .pointsFor:
+                sortedTeams = division.teams.sorted { $0.pointsFor > $1.pointsFor }
+            case .pointsAgainst:
+                sortedTeams = division.teams.sorted { $0.pointsAgainst < $1.pointsAgainst }
+            case .streak:
+                sortedTeams = division.teams.sorted { compareStreak($0.streak, $1.streak) }
+            }
+            return DivisionStandings(
+                conference: division.conference,
+                division: division.division,
+                teams: sortedTeams
+            )
+        }
+    }
+
+    private func compareStreak(_ s1: String, _ s2: String) -> Bool {
+        let num1 = Int(s1.dropFirst()) ?? 0
+        let num2 = Int(s2.dropFirst()) ?? 0
+        let isWin1 = s1.hasPrefix("W")
+        let isWin2 = s2.hasPrefix("W")
+
+        if isWin1 && !isWin2 { return true }
+        if !isWin1 && isWin2 { return false }
+        return num1 > num2
     }
 
     var body: some View {
@@ -22,6 +65,36 @@ struct StandingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding()
+
+                // Sort Options
+                Menu {
+                    ForEach(SortOption.allCases, id: \.self) { option in
+                        Button {
+                            withAnimation {
+                                sortOption = option
+                            }
+                        } label: {
+                            HStack {
+                                Text(option.rawValue)
+                                if sortOption == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("Sort by: \(sortOption.rawValue)")
+                            .font(.subheadline)
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemGray5))
+                    .cornerRadius(8)
+                }
+                .padding(.horizontal)
 
                 if isLoading {
                     ProgressView("Loading standings...")
@@ -61,8 +134,7 @@ struct StandingsView: View {
                             .padding(.top)
 
                             // Division Standings
-                            let divisions = selectedConference == .afc ? standings.afcStandings : standings.nfcStandings
-                            ForEach(divisions) { division in
+                            ForEach(sortedDivisions) { division in
                                 DivisionStandingsCard(division: division)
                                     .transition(.scale.combined(with: .opacity))
                             }

@@ -123,7 +123,7 @@ class GameDetailViewModel @Inject constructor(
     private suspend fun refreshGameData() {
         val currentGame = _uiState.value.game ?: return
 
-        repository.fetchUpcomingGames().fold(
+        repository.getUpcomingGames().fold(
             onSuccess = { games ->
                 // Find our game in the list
                 val updatedGame = games.firstOrNull { game ->
