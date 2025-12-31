@@ -3,6 +3,10 @@ package com.statshark.nfl.ui.screens.standings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -10,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,13 +24,17 @@ import androidx.navigation.NavController
  * Standings Screen
  * Displays NFL standings by division and conference
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun StandingsScreen(
     navController: NavController,
     viewModel: StandingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = uiState.isLoading,
+        onRefresh = { viewModel.loadStandings() }
+    )
 
     Scaffold(
         topBar = {
@@ -43,89 +52,98 @@ fun StandingsScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .pullRefresh(pullRefreshState)
         ) {
-            // Conference Selector
-            TabRow(selectedTabIndex = if (uiState.selectedConference == "AFC") 0 else 1) {
-                Tab(
-                    selected = uiState.selectedConference == "AFC",
-                    onClick = { viewModel.selectConference("AFC") },
-                    text = { Text("AFC") }
-                )
-                Tab(
-                    selected = uiState.selectedConference == "NFC",
-                    onClick = { viewModel.selectConference("NFC") },
-                    text = { Text("NFC") }
-                )
-            }
-
-            // Content
-            when {
-                uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Conference Selector
+                TabRow(selectedTabIndex = if (uiState.selectedConference == "AFC") 0 else 1) {
+                    Tab(
+                        selected = uiState.selectedConference == "AFC",
+                        onClick = { viewModel.selectConference("AFC") },
+                        text = { Text("AFC") }
+                    )
+                    Tab(
+                        selected = uiState.selectedConference == "NFC",
+                        onClick = { viewModel.selectConference("NFC") },
+                        text = { Text("NFC") }
+                    )
                 }
-                uiState.error != null -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+
+                // Content
+                when {
+                    uiState.isLoading && uiState.standings == null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Failed to load standings",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = uiState.error!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
-                                textAlign = TextAlign.Center
-                            )
-                            Button(onClick = { viewModel.retry() }) {
-                                Text("Retry")
-                            }
+                            CircularProgressIndicator()
                         }
                     }
-                }
-                uiState.standings != null -> {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        // Season header
-                        item {
+                    uiState.error != null && uiState.standings == null -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 Text(
-                                    text = "${uiState.standings!!.season} Season",
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    text = "Failed to load standings",
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
+                                Text(
+                                    text = uiState.error!!,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    textAlign = TextAlign.Center
+                                )
+                                Button(onClick = { viewModel.retry() }) {
+                                    Text("Retry")
+                                }
                             }
                         }
+                    }
+                    uiState.standings != null -> {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Season header
+                            item {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "${uiState.standings!!.season} Season",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
 
-                        // Display divisions
-                        items(uiState.displayedDivisions) { division ->
-                            DivisionCard(division = division)
+                            // Display divisions
+                            items(uiState.displayedDivisions) { division ->
+                                DivisionCard(division = division)
+                            }
                         }
                     }
                 }
             }
+
+            PullRefreshIndicator(
+                refreshing = uiState.isLoading,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
     }
 }

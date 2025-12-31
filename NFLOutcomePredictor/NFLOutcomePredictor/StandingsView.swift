@@ -64,9 +64,13 @@ struct StandingsView: View {
                             let divisions = selectedConference == .afc ? standings.afcStandings : standings.nfcStandings
                             ForEach(divisions) { division in
                                 DivisionStandingsCard(division: division)
+                                    .transition(.scale.combined(with: .opacity))
                             }
                         }
                         .padding()
+                    }
+                    .refreshable {
+                        await loadStandings()
                     }
                 } else {
                     VStack(spacing: 16) {

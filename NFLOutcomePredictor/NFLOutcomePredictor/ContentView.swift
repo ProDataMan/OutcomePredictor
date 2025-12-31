@@ -93,12 +93,16 @@ struct TeamsListView: View {
                                 ForEach(filteredTeams, id: \.abbreviation) { team in
                                     NavigationLink(destination: TeamDetailView(team: team)) {
                                         TeamCardView(team: team)
+                                            .transition(.scale.combined(with: .opacity))
                                     }
                                     .buttonStyle(.plain)
                                 }
                             }
                             .padding()
                         }
+                    }
+                    .refreshable {
+                        await dataManager.loadTeams(forceReload: true)
                     }
                 }
             }
