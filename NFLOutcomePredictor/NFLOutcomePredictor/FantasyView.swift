@@ -57,6 +57,9 @@ struct FantasyView: View {
             .sheet(isPresented: $showingSettings) {
                 FantasySettingsView()
             }
+            .task {
+                await dataManager.loadTeams()
+            }
         }
     }
 

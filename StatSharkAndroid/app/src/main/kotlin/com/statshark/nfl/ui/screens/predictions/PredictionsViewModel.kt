@@ -120,9 +120,26 @@ class PredictionsViewModel @Inject constructor(
                     )
                 },
                 onFailure = { error ->
+                    val errorMessage = when {
+                        error.message?.contains("HTTP") == true -> {
+                            "Server error: ${error.message}"
+                        }
+                        error.message?.contains("Unable to resolve host") == true -> {
+                            "Network error: Cannot reach server. Check your connection."
+                        }
+                        error.message?.contains("timeout") == true -> {
+                            "Request timed out. Server may be slow or unavailable."
+                        }
+                        error.message?.contains("JSON") == true -> {
+                            "Data format error: ${error.message}"
+                        }
+                        else -> {
+                            error.message ?: "Prediction failed: Unknown error"
+                        }
+                    }
                     _uiState.value = _uiState.value.copy(
                         loadingPredictions = _uiState.value.loadingPredictions - gameId,
-                        predictionErrors = _uiState.value.predictionErrors + (gameId to (error.message ?: "Prediction failed"))
+                        predictionErrors = _uiState.value.predictionErrors + (gameId to errorMessage)
                     )
                 }
             )
@@ -195,8 +212,22 @@ class PredictionsViewModel @Inject constructor(
                     },
                     onFailure = { error ->
                         // Continue with other predictions even if one fails
+                        val errorMessage = when {
+                            error.message?.contains("HTTP") == true -> {
+                                "Server error: ${error.message}"
+                            }
+                            error.message?.contains("Unable to resolve host") == true -> {
+                                "Network error: Cannot reach server"
+                            }
+                            error.message?.contains("timeout") == true -> {
+                                "Request timed out"
+                            }
+                            else -> {
+                                error.message ?: "Prediction failed"
+                            }
+                        }
                         _uiState.value = _uiState.value.copy(
-                            predictionErrors = _uiState.value.predictionErrors + (gameId to (error.message ?: "Prediction failed")),
+                            predictionErrors = _uiState.value.predictionErrors + (gameId to errorMessage),
                             batchProgress = (index + 1) / total
                         )
                     }

@@ -14,10 +14,19 @@ struct PredictionView: View {
     @State private var selectedUpcomingGameIndex: Int?
     @State private var minConfidence: Double = 0.0
 
+    // Pre-selected teams (for navigation from team details)
+    let preSelectedHomeTeam: TeamDTO?
+    let preSelectedAwayTeam: TeamDTO?
+
     // Batch predictions
     @State private var batchPredictions: [String: PredictionResult] = [:]
     @State private var isLoadingBatch = false
     @State private var batchProgress: Double = 0.0
+
+    init(homeTeam: TeamDTO? = nil, awayTeam: TeamDTO? = nil) {
+        self.preSelectedHomeTeam = homeTeam
+        self.preSelectedAwayTeam = awayTeam
+    }
 
     // Confidence filter options
     private let confidenceOptions: [(label: String, value: Double)] = [
@@ -327,14 +336,32 @@ struct PredictionView: View {
                 await dataManager.loadTeams()
                 await dataManager.loadUpcomingGames()
 
-                // Auto-select current week
-                if selectedWeek == nil, let currentWeek = currentWeek {
-                    selectedWeek = currentWeek
-                }
+                // Set pre-selected teams if provided
+                if let preHome = preSelectedHomeTeam, let preAway = preSelectedAwayTeam {
+                    homeTeam = preHome
+                    awayTeam = preAway
 
-                // Auto-select first game if available
-                if !filteredGames.isEmpty && selectedUpcomingGameIndex == nil {
-                    selectUpcomingGame(at: 0)
+                    // Find the game week for the pre-selected teams
+                    if let game = dataManager.upcomingGames.first(where: {
+                        ($0.homeTeam.abbreviation == preHome.abbreviation && $0.awayTeam.abbreviation == preAway.abbreviation) ||
+                        ($0.homeTeam.abbreviation == preAway.abbreviation && $0.awayTeam.abbreviation == preHome.abbreviation)
+                    }) {
+                        selectedWeek = game.week
+                        selectedSeason = game.season ?? Calendar.current.component(.year, from: Date())
+                    }
+
+                    // Auto-make prediction for pre-selected game
+                    makePredictionTask()
+                } else {
+                    // Auto-select current week
+                    if selectedWeek == nil, let currentWeek = currentWeek {
+                        selectedWeek = currentWeek
+                    }
+
+                    // Auto-select first game if available
+                    if !filteredGames.isEmpty && selectedUpcomingGameIndex == nil {
+                        selectUpcomingGame(at: 0)
+                    }
                 }
             }
         }

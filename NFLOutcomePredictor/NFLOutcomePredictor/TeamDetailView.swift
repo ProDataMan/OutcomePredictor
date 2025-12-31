@@ -41,6 +41,65 @@ struct TeamDetailView: View {
                 }
                 .padding(.horizontal)
 
+                // Next Game Card (if there's an upcoming game)
+                if let upcomingGame = games.first(where: { $0.homeScore == nil && $0.awayScore == nil }) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Next Game")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
+
+                        NavigationLink(destination: PredictionView(homeTeam: upcomingGame.homeTeam, awayTeam: upcomingGame.awayTeam)) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "chart.line.uptrend.xyaxis")
+                                        .font(.headline)
+                                        .foregroundColor(.blue)
+                                    Text("GET PREDICTION")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.blue)
+                                }
+
+                                let opponent = upcomingGame.homeTeam.abbreviation == team.abbreviation ? upcomingGame.awayTeam : upcomingGame.homeTeam
+                                let isHome = upcomingGame.homeTeam.abbreviation == team.abbreviation
+
+                                Text("\(isHome ? "vs" : "@") \(opponent.name)")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+
+                                if let week = upcomingGame.week {
+                                    HStack {
+                                        Text("Week \(week)")
+                                        Text("•")
+                                        Text(upcomingGame.date, style: .date)
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                }
+
+                                HStack {
+                                    Text("Tap to see prediction")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.blue)
+                                }
+                                .padding(.top, 4)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .padding(.horizontal)
+                    }
+                }
+
                 // Games section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Games")
