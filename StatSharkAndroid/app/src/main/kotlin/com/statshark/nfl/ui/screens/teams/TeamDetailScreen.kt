@@ -36,6 +36,7 @@ import com.statshark.nfl.data.model.GameDTO
 import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
+import com.statshark.nfl.ui.components.FeedbackButton
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -76,6 +77,9 @@ fun TeamDetailScreen(
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
+                },
+                actions = {
+                    FeedbackButton(pageName = "Team Detail")
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = uiState.team?.let { TeamColors.getPrimaryColor(it.abbreviation) } ?: MaterialTheme.colorScheme.surface,

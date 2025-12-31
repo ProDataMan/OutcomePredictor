@@ -24,6 +24,7 @@ import com.statshark.nfl.data.model.GameDTO
 import com.statshark.nfl.data.model.PredictionDTO
 import com.statshark.nfl.data.model.TeamDTO
 import com.statshark.nfl.ui.theme.TeamColors
+import com.statshark.nfl.ui.components.FeedbackButton
 
 /**
  * Game Detail Screen
@@ -50,6 +51,9 @@ fun GameDetailScreen(
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    FeedbackButton(pageName = "Game Detail")
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,

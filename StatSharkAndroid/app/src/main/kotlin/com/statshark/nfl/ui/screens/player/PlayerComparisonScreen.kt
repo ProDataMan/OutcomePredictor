@@ -25,6 +25,7 @@ import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.data.model.TeamDTO
 import com.statshark.nfl.ui.screens.teams.getTeamHelmetResource
 import com.statshark.nfl.ui.theme.TeamColors
+import com.statshark.nfl.ui.components.FeedbackButton
 import kotlin.math.max
 
 /**
@@ -48,6 +49,9 @@ fun PlayerComparisonScreen(
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Filled.ArrowBack, "Back")
                     }
+                },
+                actions = {
+                    FeedbackButton(pageName = "Player Comparison")
                 }
             )
         }

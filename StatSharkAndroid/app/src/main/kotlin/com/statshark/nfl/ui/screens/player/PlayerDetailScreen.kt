@@ -29,6 +29,7 @@ import com.statshark.nfl.R
 import com.statshark.nfl.data.model.PlayerDTO
 import com.statshark.nfl.data.model.PlayerStatsDTO
 import com.statshark.nfl.ui.theme.TeamColors
+import com.statshark.nfl.ui.components.FeedbackButton
 
 /**
  * Player Detail Screen
@@ -52,6 +53,9 @@ fun PlayerDetailScreen(
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    FeedbackButton(pageName = "Player Detail")
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = teamColors.primary,
