@@ -95,7 +95,7 @@ public actor APISportsDataSource: Sendable {
 
         let apiResponse = try JSONDecoder().decode(APISportsPlayersResponse.self, from: data)
 
-        guard !apiResponse.errors.isEmpty == false || apiResponse.results > 0 else {
+        guard apiResponse.results > 0 else {
             throw DataSourceError.noDataAvailable
         }
 
@@ -270,11 +270,14 @@ public actor APISportsDataSource: Sendable {
 
 /// Root response from API-Sports players endpoint.
 private struct APISportsPlayersResponse: Codable {
-    let get: String
-    let parameters: [String: String]
-    let errors: [String: String]
     let results: Int
     let response: [APISportsPlayerData]
+
+    // Ignore other fields that have variable types
+    enum CodingKeys: String, CodingKey {
+        case results
+        case response
+    }
 }
 
 /// Player data container.
