@@ -49,13 +49,13 @@ struct TeamDetailView: View {
                             .fontWeight(.bold)
                             .padding(.horizontal)
 
-                        NavigationLink(destination: PredictionView(homeTeam: upcomingGame.homeTeam, awayTeam: upcomingGame.awayTeam)) {
+                        NavigationLink(destination: GameDetailView(game: upcomingGame, sourceTeam: team)) {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {
                                     Image(systemName: "chart.line.uptrend.xyaxis")
                                         .font(.headline)
                                         .foregroundColor(.blue)
-                                    Text("GET PREDICTION")
+                                    Text("VIEW PREDICTION")
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .foregroundColor(.blue)
@@ -80,7 +80,7 @@ struct TeamDetailView: View {
                                 }
 
                                 HStack {
-                                    Text("Tap to see prediction")
+                                    Text("Tap to see game details & prediction")
                                         .font(.caption)
                                         .foregroundColor(.blue)
                                     Spacer()
@@ -96,33 +96,6 @@ struct TeamDetailView: View {
                             .cornerRadius(12)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .padding(.horizontal)
-                    }
-                }
-
-                // Games section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Games")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
-
-                    if isLoadingGames {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    } else if games.isEmpty {
-                        Text("No games found")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    } else {
-                        ForEach(games, id: \.id) { game in
-                            NavigationLink(destination: GameDetailView(game: game, sourceTeam: team)) {
-                                GameCardView(game: game, teamAbbreviation: team.abbreviation)
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
                         .padding(.horizontal)
                     }
                 }

@@ -18,16 +18,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.statshark.nfl.data.cache.GameCache
 import com.statshark.nfl.data.cache.PlayerCache
-import com.statshark.nfl.data.cache.PredictionCache
-import com.statshark.nfl.data.cache.ArticleCache
 import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.navigation.bottomNavItems
 import com.statshark.nfl.ui.screens.fantasy.FantasyScreen
 import com.statshark.nfl.ui.screens.game.GameDetailScreen
 import com.statshark.nfl.ui.screens.player.PlayerDetailScreen
 import com.statshark.nfl.ui.screens.predictions.PredictionsScreen
-import com.statshark.nfl.ui.screens.predictions.PredictionDetailScreen
-import com.statshark.nfl.ui.screens.article.ArticleDetailScreen
 import com.statshark.nfl.ui.screens.standings.StandingsScreen
 import com.statshark.nfl.ui.screens.teams.TeamDetailScreen
 import com.statshark.nfl.ui.screens.teams.TeamsScreen
@@ -92,28 +88,8 @@ fun StatSharkApp() {
                     StandingsScreen(navController = navController)
                 }
 
-                composable(
-                    route = Screen.Predictions.route,
-                    arguments = listOf(
-                        navArgument("homeTeam") {
-                            type = NavType.StringType
-                            nullable = true
-                            defaultValue = null
-                        },
-                        navArgument("awayTeam") {
-                            type = NavType.StringType
-                            nullable = true
-                            defaultValue = null
-                        }
-                    )
-                ) { backStackEntry ->
-                    val homeTeam = backStackEntry.arguments?.getString("homeTeam")
-                    val awayTeam = backStackEntry.arguments?.getString("awayTeam")
-                    PredictionsScreen(
-                        navController = navController,
-                        preSelectedHomeTeam = homeTeam,
-                        preSelectedAwayTeam = awayTeam
-                    )
+                composable(Screen.Predictions.route) {
+                    PredictionsScreen(navController = navController)
                 }
 
                 composable(Screen.Fantasy.route) {
@@ -178,48 +154,6 @@ fun StatSharkApp() {
                         )
                     } else {
                         // Game not in cache, navigate back
-                        navController.navigateUp()
-                    }
-                }
-
-                // Prediction Detail Screen
-                composable(
-                    route = Screen.PredictionDetail.route,
-                    arguments = listOf(navArgument("gameId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val gameId = backStackEntry.arguments?.getString("gameId") ?: return@composable
-
-                    // Retrieve prediction from cache
-                    val predictionData = PredictionCache.get(gameId)
-                    if (predictionData != null) {
-                        val (game, prediction) = predictionData
-                        PredictionDetailScreen(
-                            navController = navController,
-                            game = game,
-                            prediction = prediction
-                        )
-                    } else {
-                        // Prediction not in cache, navigate back
-                        navController.navigateUp()
-                    }
-                }
-
-                // Article Detail Screen
-                composable(
-                    route = Screen.ArticleDetail.route,
-                    arguments = listOf(navArgument("articleId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val articleId = backStackEntry.arguments?.getString("articleId") ?: return@composable
-
-                    // Retrieve article from cache
-                    val article = ArticleCache.get(articleId)
-                    if (article != null) {
-                        ArticleDetailScreen(
-                            article = article,
-                            navController = navController
-                        )
-                    } else {
-                        // Article not in cache, navigate back
                         navController.navigateUp()
                     }
                 }

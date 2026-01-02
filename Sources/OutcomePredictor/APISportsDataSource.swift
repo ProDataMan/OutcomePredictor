@@ -93,6 +93,11 @@ public actor APISportsDataSource: Sendable {
             throw DataSourceError.httpError(httpResponse.statusCode)
         }
 
+        // Log raw response for debugging
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("📋 API-Sports raw response (first 500 chars): \(String(jsonString.prefix(500)))")
+        }
+
         let apiResponse = try JSONDecoder().decode(APISportsPlayersResponse.self, from: data)
 
         guard apiResponse.results > 0 else {

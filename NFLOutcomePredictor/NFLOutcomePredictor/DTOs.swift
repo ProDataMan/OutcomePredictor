@@ -184,6 +184,7 @@ public struct PredictionResult: Codable, Sendable {
     public let awayWinProbability: Double?
     public let predictedHomeScore: Int?
     public let predictedAwayScore: Int?
+    public let confidenceBreakdown: PredictionConfidenceBreakdown?
 
     public init(
         predictedWinner: String,
@@ -194,7 +195,8 @@ public struct PredictionResult: Codable, Sendable {
         homeWinProbability: Double? = nil,
         awayWinProbability: Double? = nil,
         predictedHomeScore: Int? = nil,
-        predictedAwayScore: Int? = nil
+        predictedAwayScore: Int? = nil,
+        confidenceBreakdown: PredictionConfidenceBreakdown? = nil
     ) {
         self.predictedWinner = predictedWinner
         self.confidence = confidence
@@ -205,6 +207,43 @@ public struct PredictionResult: Codable, Sendable {
         self.awayWinProbability = awayWinProbability
         self.predictedHomeScore = predictedHomeScore
         self.predictedAwayScore = predictedAwayScore
+        self.confidenceBreakdown = confidenceBreakdown
+    }
+}
+
+/// Structured confidence breakdown showing prediction factors.
+public struct PredictionConfidenceBreakdown: Codable, Sendable {
+    public let factors: [ConfidenceFactor]
+    public let totalConfidence: Double
+
+    public init(factors: [ConfidenceFactor], totalConfidence: Double) {
+        self.factors = factors
+        self.totalConfidence = totalConfidence
+    }
+}
+
+/// Individual prediction confidence factor.
+public struct ConfidenceFactor: Codable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let impact: Double  // -1.0 to 1.0 (positive favors predicted winner)
+    public let description: String
+    public let category: String  // "historical", "injuries", "momentum", "weather", "travel"
+
+    public init(id: String, name: String, impact: Double, description: String, category: String) {
+        self.id = id
+        self.impact = impact
+        self.description = description
+        self.category = category
+        self.name = name
+    }
+
+    public var impactPercentage: Double {
+        abs(impact) * 100
+    }
+
+    public var favorsWinner: Bool {
+        impact > 0
     }
 }
 
@@ -454,21 +493,34 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
 
 /// Player statistics for mobile app.
 public struct PlayerStatsDTO: Codable, Sendable {
+    // Passing stats
     public let passingYards: Int?
     public let passingTouchdowns: Int?
     public let passingInterceptions: Int?
     public let passingCompletions: Int?
     public let passingAttempts: Int?
+
+    // Rushing stats
     public let rushingYards: Int?
     public let rushingTouchdowns: Int?
     public let rushingAttempts: Int?
+
+    // Receiving stats
     public let receivingYards: Int?
     public let receivingTouchdowns: Int?
     public let receptions: Int?
     public let targets: Int?
+
+    // Defensive stats
     public let tackles: Int?
     public let sacks: Double?
     public let interceptions: Int?
+    public let forcedFumbles: Int?
+
+    // Kicking stats
+    public let fieldGoalsMade: Int?
+    public let fieldGoalsAttempted: Int?
+    public let extraPointsMade: Int?
 
     public init(
         passingYards: Int? = nil,
@@ -485,7 +537,11 @@ public struct PlayerStatsDTO: Codable, Sendable {
         targets: Int? = nil,
         tackles: Int? = nil,
         sacks: Double? = nil,
-        interceptions: Int? = nil
+        interceptions: Int? = nil,
+        forcedFumbles: Int? = nil,
+        fieldGoalsMade: Int? = nil,
+        fieldGoalsAttempted: Int? = nil,
+        extraPointsMade: Int? = nil
     ) {
         self.passingYards = passingYards
         self.passingTouchdowns = passingTouchdowns
@@ -502,6 +558,10 @@ public struct PlayerStatsDTO: Codable, Sendable {
         self.tackles = tackles
         self.sacks = sacks
         self.interceptions = interceptions
+        self.forcedFumbles = forcedFumbles
+        self.fieldGoalsMade = fieldGoalsMade
+        self.fieldGoalsAttempted = fieldGoalsAttempted
+        self.extraPointsMade = extraPointsMade
     }
 
     public var passingCompletionPercentage: Double? {
@@ -512,6 +572,11 @@ public struct PlayerStatsDTO: Codable, Sendable {
     public var yardsPerCarry: Double? {
         guard let yards = rushingYards, let att = rushingAttempts, att > 0 else { return nil }
         return Double(yards) / Double(att)
+    }
+
+    public var fieldGoalPercentage: Double? {
+        guard let made = fieldGoalsMade, let attempted = fieldGoalsAttempted, attempted > 0 else { return nil }
+        return (Double(made) / Double(attempted)) * 100.0
     }
 }
 
@@ -573,6 +638,270 @@ public struct GameWeatherDTO: Codable, Sendable {
         self.precipitation = precipitation
         self.humidity = humidity
         self.timestamp = timestamp
+    }
+}
+
+/// Team weather performance statistics.
+public struct TeamWeatherStatsDTO: Codable, Sendable {
+    public let teamAbbreviation: String
+    public let season: Int
+    public let homeStats: WeatherPerformanceDTO
+    public let awayStats: WeatherPerformanceDTO
+
+    public init(
+        teamAbbreviation: String,
+        season: Int,
+        homeStats: WeatherPerformanceDTO,
+        awayStats: WeatherPerformanceDTO
+    ) {
+        self.teamAbbreviation = teamAbbreviation
+        self.season = season
+        self.homeStats = homeStats
+        self.awayStats = awayStats
+    }
+}
+
+/// Performance in different weather conditions.
+public struct WeatherPerformanceDTO: Codable, Sendable {
+    public let clear: ConditionStatsDTO
+    public let rain: ConditionStatsDTO
+    public let snow: ConditionStatsDTO
+    public let wind: ConditionStatsDTO
+    public let cold: ConditionStatsDTO
+    public let hot: ConditionStatsDTO
+
+    public init(
+        clear: ConditionStatsDTO,
+        rain: ConditionStatsDTO,
+        snow: ConditionStatsDTO,
+        wind: ConditionStatsDTO,
+        cold: ConditionStatsDTO,
+        hot: ConditionStatsDTO
+    ) {
+        self.clear = clear
+        self.rain = rain
+        self.snow = snow
+        self.wind = wind
+        self.cold = cold
+        self.hot = hot
+    }
+}
+
+/// Statistics for a weather condition.
+public struct ConditionStatsDTO: Codable, Sendable {
+    public let games: Int
+    public let wins: Int
+    public let losses: Int
+    public let avgPointsScored: Double
+    public let avgPointsAllowed: Double
+
+    public var winPercentage: Double {
+        games > 0 ? (Double(wins) / Double(games)) * 100 : 0
+    }
+
+    public init(
+        games: Int,
+        wins: Int,
+        losses: Int,
+        avgPointsScored: Double,
+        avgPointsAllowed: Double
+    ) {
+        self.games = games
+        self.wins = wins
+        self.losses = losses
+        self.avgPointsScored = avgPointsScored
+        self.avgPointsAllowed = avgPointsAllowed
+    }
+}
+
+// MARK: - Player Comparison DTOs
+
+/// Request to compare multiple players.
+public struct PlayerComparisonRequest: Codable, Sendable {
+    public let playerIds: [String]
+    public let season: Int
+
+    public init(playerIds: [String], season: Int) {
+        self.playerIds = playerIds
+        self.season = season
+    }
+}
+
+/// Response containing compared players with analysis.
+public struct PlayerComparisonResponse: Codable, Sendable {
+    public let players: [PlayerDTO]
+    public let comparisons: [StatComparison]
+    public let season: Int
+    public let generatedAt: Date
+
+    public init(
+        players: [PlayerDTO],
+        comparisons: [StatComparison],
+        season: Int,
+        generatedAt: Date = Date()
+    ) {
+        self.players = players
+        self.comparisons = comparisons
+        self.season = season
+        self.generatedAt = generatedAt
+    }
+}
+
+/// Statistical comparison between players for a specific metric.
+public struct StatComparison: Codable, Sendable, Identifiable {
+    public let id: String
+    public let statName: String
+    public let category: StatCategory
+    public let values: [PlayerStatValue]
+    public let leaderPlayerId: String?
+
+    public init(
+        id: String,
+        statName: String,
+        category: StatCategory,
+        values: [PlayerStatValue],
+        leaderPlayerId: String? = nil
+    ) {
+        self.id = id
+        self.statName = statName
+        self.category = category
+        self.values = values
+        self.leaderPlayerId = leaderPlayerId
+    }
+}
+
+/// Individual player's value for a statistic.
+public struct PlayerStatValue: Codable, Sendable, Identifiable {
+    public let playerId: String
+    public let playerName: String
+    public let value: Double?
+    public let formattedValue: String
+    public let percentileRank: Double?
+
+    public var id: String { playerId }
+
+    public init(
+        playerId: String,
+        playerName: String,
+        value: Double?,
+        formattedValue: String,
+        percentileRank: Double? = nil
+    ) {
+        self.playerId = playerId
+        self.playerName = playerName
+        self.value = value
+        self.formattedValue = formattedValue
+        self.percentileRank = percentileRank
+    }
+}
+
+/// Category for player statistics.
+public enum StatCategory: String, Codable, Sendable {
+    case passing = "passing"
+    case rushing = "rushing"
+    case receiving = "receiving"
+    case defense = "defense"
+    case kicking = "kicking"
+    case general = "general"
+}
+
+// MARK: - Injury DTOs
+
+/// Team injury report with list of injured players.
+public struct TeamInjuryReportDTO: Codable, Sendable {
+    public let team: TeamDTO
+    public let injuries: [InjuredPlayerDTO]
+    public let fetchedAt: Date
+
+    public init(team: TeamDTO, injuries: [InjuredPlayerDTO], fetchedAt: Date = Date()) {
+        self.team = team
+        self.injuries = injuries
+        self.fetchedAt = fetchedAt
+    }
+
+    /// Total injury impact for the team.
+    public var totalImpact: Double {
+        let sortedImpacts = injuries.map { $0.impact }.sorted(by: >)
+        let weights = [1.0, 0.5, 0.25]
+
+        var total = 0.0
+        for (index, impact) in sortedImpacts.prefix(3).enumerated() {
+            total += impact * weights[index]
+        }
+
+        return min(1.0, total)
+    }
+
+    /// Get key injuries (high impact players).
+    public var keyInjuries: [InjuredPlayerDTO] {
+        injuries.filter { injury in
+            injury.impact > 0.3 && (injury.status == "OUT" || injury.status == "DOUBTFUL")
+        }
+    }
+}
+
+/// Injured player information.
+public struct InjuredPlayerDTO: Codable, Sendable, Identifiable {
+    public let name: String
+    public let position: String
+    public let status: String
+    public let description: String?
+
+    public var id: String { name }
+
+    public init(name: String, position: String, status: String, description: String? = nil) {
+        self.name = name
+        self.position = position
+        self.status = status
+        self.description = description
+    }
+
+    /// Calculate impact on team performance (0.0 to 1.0).
+    public var impact: Double {
+        let statusMultiplier: Double
+        switch status.uppercased() {
+        case "OUT":
+            statusMultiplier = 1.0
+        case "DOUBTFUL":
+            statusMultiplier = 0.75
+        case "QUESTIONABLE":
+            statusMultiplier = 0.4
+        case "PROBABLE":
+            statusMultiplier = 0.15
+        default:
+            statusMultiplier = 0.0
+        }
+
+        let positionWeight: Double
+        switch position.uppercased() {
+        case "QB":
+            positionWeight = 1.0
+        case "RB":
+            positionWeight = 0.6
+        case "WR":
+            positionWeight = 0.5
+        case "TE":
+            positionWeight = 0.3
+        case "DEF", "DEFENSE":
+            positionWeight = 0.4
+        default:
+            positionWeight = 0.1
+        }
+
+        return positionWeight * statusMultiplier
+    }
+}
+
+/// Injury report for both teams in a game.
+public struct GameInjuryReportDTO: Codable, Sendable {
+    public let homeTeam: TeamInjuryReportDTO
+    public let awayTeam: TeamInjuryReportDTO
+    public let gameId: String
+
+    public init(homeTeam: TeamInjuryReportDTO, awayTeam: TeamInjuryReportDTO, gameId: String) {
+        self.homeTeam = homeTeam
+        self.awayTeam = awayTeam
+        self.gameId = gameId
     }
 }
 
@@ -669,3 +998,344 @@ public struct LeagueStandings: Codable, Sendable {
         self.divisions = divisions
     }
 }
+
+// MARK: - Team Stats DTOs
+
+/// Comprehensive team statistics for a season.
+public struct TeamStatsDTO: Codable, Sendable {
+    public let team: TeamDTO
+    public let season: Int
+    public let offensiveStats: OffensiveStatsDTO
+    public let defensiveStats: DefensiveStatsDTO
+    public let rankings: TeamRankingsDTO?
+    public let recentGames: [GameDTO]
+    public let keyPlayers: [PlayerDTO]
+
+    public init(
+        team: TeamDTO,
+        season: Int,
+        offensiveStats: OffensiveStatsDTO,
+        defensiveStats: DefensiveStatsDTO,
+        rankings: TeamRankingsDTO? = nil,
+        recentGames: [GameDTO] = [],
+        keyPlayers: [PlayerDTO] = []
+    ) {
+        self.team = team
+        self.season = season
+        self.offensiveStats = offensiveStats
+        self.defensiveStats = defensiveStats
+        self.rankings = rankings
+        self.recentGames = recentGames
+        self.keyPlayers = keyPlayers
+    }
+}
+
+/// Offensive statistics for a team.
+public struct OffensiveStatsDTO: Codable, Sendable {
+    public let pointsPerGame: Double
+    public let yardsPerGame: Double
+    public let passingYardsPerGame: Double
+    public let rushingYardsPerGame: Double
+    public let thirdDownConversionRate: Double?
+    public let redZoneEfficiency: Double?
+    public let turnoversPerGame: Double?
+
+    public init(
+        pointsPerGame: Double,
+        yardsPerGame: Double,
+        passingYardsPerGame: Double,
+        rushingYardsPerGame: Double,
+        thirdDownConversionRate: Double? = nil,
+        redZoneEfficiency: Double? = nil,
+        turnoversPerGame: Double? = nil
+    ) {
+        self.pointsPerGame = pointsPerGame
+        self.yardsPerGame = yardsPerGame
+        self.passingYardsPerGame = passingYardsPerGame
+        self.rushingYardsPerGame = rushingYardsPerGame
+        self.thirdDownConversionRate = thirdDownConversionRate
+        self.redZoneEfficiency = redZoneEfficiency
+        self.turnoversPerGame = turnoversPerGame
+    }
+}
+
+/// Defensive statistics for a team.
+public struct DefensiveStatsDTO: Codable, Sendable {
+    public let pointsAllowedPerGame: Double
+    public let yardsAllowedPerGame: Double
+    public let passingYardsAllowedPerGame: Double
+    public let rushingYardsAllowedPerGame: Double
+    public let sacksPerGame: Double?
+    public let interceptionsPerGame: Double?
+    public let forcedFumblesPerGame: Double?
+
+    public init(
+        pointsAllowedPerGame: Double,
+        yardsAllowedPerGame: Double,
+        passingYardsAllowedPerGame: Double,
+        rushingYardsAllowedPerGame: Double,
+        sacksPerGame: Double? = nil,
+        interceptionsPerGame: Double? = nil,
+        forcedFumblesPerGame: Double? = nil
+    ) {
+        self.pointsAllowedPerGame = pointsAllowedPerGame
+        self.yardsAllowedPerGame = yardsAllowedPerGame
+        self.passingYardsAllowedPerGame = passingYardsAllowedPerGame
+        self.rushingYardsAllowedPerGame = rushingYardsAllowedPerGame
+        self.sacksPerGame = sacksPerGame
+        self.interceptionsPerGame = interceptionsPerGame
+        self.forcedFumblesPerGame = forcedFumblesPerGame
+    }
+}
+
+/// Team rankings in various statistical categories.
+public struct TeamRankingsDTO: Codable, Sendable {
+    public let offensiveRank: Int?
+    public let defensiveRank: Int?
+    public let passingOffenseRank: Int?
+    public let rushingOffenseRank: Int?
+    public let passingDefenseRank: Int?
+    public let rushingDefenseRank: Int?
+    public let totalRank: Int?
+
+    public init(
+        offensiveRank: Int? = nil,
+        defensiveRank: Int? = nil,
+        passingOffenseRank: Int? = nil,
+        rushingOffenseRank: Int? = nil,
+        passingDefenseRank: Int? = nil,
+        rushingDefenseRank: Int? = nil,
+        totalRank: Int? = nil
+    ) {
+        self.offensiveRank = offensiveRank
+        self.defensiveRank = defensiveRank
+        self.passingOffenseRank = passingOffenseRank
+        self.rushingOffenseRank = rushingOffenseRank
+        self.passingDefenseRank = passingDefenseRank
+        self.rushingDefenseRank = rushingDefenseRank
+        self.totalRank = totalRank
+    }
+}
+
+// MARK: - Prediction Accuracy DTOs
+
+/// Historical prediction accuracy tracking.
+public struct PredictionAccuracyDTO: Codable, Sendable {
+    public let overallAccuracy: Double
+    public let totalPredictions: Int
+    public let correctPredictions: Int
+    public let weeklyAccuracy: [WeeklyAccuracyDTO]
+    public let confidenceBreakdown: [ConfidenceAccuracyDTO]
+    public let modelVersion: String
+    public let lastUpdated: Date
+
+    public init(
+        overallAccuracy: Double,
+        totalPredictions: Int,
+        correctPredictions: Int,
+        weeklyAccuracy: [WeeklyAccuracyDTO],
+        confidenceBreakdown: [ConfidenceAccuracyDTO],
+        modelVersion: String,
+        lastUpdated: Date = Date()
+    ) {
+        self.overallAccuracy = overallAccuracy
+        self.totalPredictions = totalPredictions
+        self.correctPredictions = correctPredictions
+        self.weeklyAccuracy = weeklyAccuracy
+        self.confidenceBreakdown = confidenceBreakdown
+        self.modelVersion = modelVersion
+        self.lastUpdated = lastUpdated
+    }
+}
+
+/// Accuracy statistics for a specific week.
+public struct WeeklyAccuracyDTO: Codable, Sendable, Identifiable {
+    public let week: Int
+    public let season: Int
+    public let accuracy: Double
+    public let totalGames: Int
+    public let correctPredictions: Int
+
+    public var id: String { "\(season)-\(week)" }
+
+    public init(
+        week: Int,
+        season: Int,
+        accuracy: Double,
+        totalGames: Int,
+        correctPredictions: Int
+    ) {
+        self.week = week
+        self.season = season
+        self.accuracy = accuracy
+        self.totalGames = totalGames
+        self.correctPredictions = correctPredictions
+    }
+}
+
+/// Accuracy breakdown by confidence level.
+public struct ConfidenceAccuracyDTO: Codable, Sendable, Identifiable {
+    public let confidenceRange: String
+    public let accuracy: Double
+    public let totalPredictions: Int
+    public let correctPredictions: Int
+    public let minConfidence: Double
+    public let maxConfidence: Double
+
+    public var id: String { confidenceRange }
+
+    public init(
+        confidenceRange: String,
+        accuracy: Double,
+        totalPredictions: Int,
+        correctPredictions: Int,
+        minConfidence: Double,
+        maxConfidence: Double
+    ) {
+        self.confidenceRange = confidenceRange
+        self.accuracy = accuracy
+        self.totalPredictions = totalPredictions
+        self.correctPredictions = correctPredictions
+        self.minConfidence = minConfidence
+        self.maxConfidence = maxConfidence
+    }
+}
+
+/// Individual prediction result with actual outcome.
+public struct PredictionResultDTO: Codable, Sendable, Identifiable {
+    public let id: String
+    public let gameId: String
+    public let homeTeam: TeamDTO
+    public let awayTeam: TeamDTO
+    public let predictedWinner: String
+    public let actualWinner: String?
+    public let confidence: Double
+    public let week: Int
+    public let season: Int
+    public let gameDate: Date
+    public let correct: Bool?
+
+    public init(
+        id: String,
+        gameId: String,
+        homeTeam: TeamDTO,
+        awayTeam: TeamDTO,
+        predictedWinner: String,
+        actualWinner: String?,
+        confidence: Double,
+        week: Int,
+        season: Int,
+        gameDate: Date,
+        correct: Bool?
+    ) {
+        self.id = id
+        self.gameId = gameId
+        self.homeTeam = homeTeam
+        self.awayTeam = awayTeam
+        self.predictedWinner = predictedWinner
+        self.actualWinner = actualWinner
+        self.confidence = confidence
+        self.week = week
+        self.season = season
+        self.gameDate = gameDate
+        self.correct = correct
+    }
+}
+
+// MARK: - Model Comparison DTOs
+
+/// Comparison of multiple prediction models for a game.
+public struct ModelComparisonDTO: Codable, Sendable {
+    public let game: GameDTO
+    public let models: [PredictionModelDTO]
+    public let consensus: ConsensusDTO?
+    public let generatedAt: Date
+
+    public init(
+        game: GameDTO,
+        models: [PredictionModelDTO],
+        consensus: ConsensusDTO? = nil,
+        generatedAt: Date = Date()
+    ) {
+        self.game = game
+        self.models = models
+        self.consensus = consensus
+        self.generatedAt = generatedAt
+    }
+}
+
+/// Individual prediction model result.
+public struct PredictionModelDTO: Codable, Sendable, Identifiable {
+    public let id: String
+    public let modelName: String
+    public let modelVersion: String
+    public let predictedWinner: String
+    public let confidence: Double
+    public let homeWinProbability: Double
+    public let awayWinProbability: Double
+    public let predictedHomeScore: Int?
+    public let predictedAwayScore: Int?
+    public let reasoning: String?
+    public let accuracy: ModelAccuracyDTO?
+
+    public init(
+        id: String,
+        modelName: String,
+        modelVersion: String,
+        predictedWinner: String,
+        confidence: Double,
+        homeWinProbability: Double,
+        awayWinProbability: Double,
+        predictedHomeScore: Int? = nil,
+        predictedAwayScore: Int? = nil,
+        reasoning: String? = nil,
+        accuracy: ModelAccuracyDTO? = nil
+    ) {
+        self.id = id
+        self.modelName = modelName
+        self.modelVersion = modelVersion
+        self.predictedWinner = predictedWinner
+        self.confidence = confidence
+        self.homeWinProbability = homeWinProbability
+        self.awayWinProbability = awayWinProbability
+        self.predictedHomeScore = predictedHomeScore
+        self.predictedAwayScore = predictedAwayScore
+        self.reasoning = reasoning
+        self.accuracy = accuracy
+    }
+}
+
+/// Model accuracy statistics.
+public struct ModelAccuracyDTO: Codable, Sendable {
+    public let overallAccuracy: Double
+    public let recentAccuracy: Double
+    public let totalPredictions: Int
+
+    public init(overallAccuracy: Double, recentAccuracy: Double, totalPredictions: Int) {
+        self.overallAccuracy = overallAccuracy
+        self.recentAccuracy = recentAccuracy
+        self.totalPredictions = totalPredictions
+    }
+}
+
+/// Consensus prediction from all models.
+public struct ConsensusDTO: Codable, Sendable {
+    public let predictedWinner: String
+    public let agreementPercentage: Double
+    public let averageConfidence: Double
+    public let modelCount: Int
+
+    public init(
+        predictedWinner: String,
+        agreementPercentage: Double,
+        averageConfidence: Double,
+        modelCount: Int
+    ) {
+        self.predictedWinner = predictedWinner
+        self.agreementPercentage = agreementPercentage
+        self.averageConfidence = averageConfidence
+        self.modelCount = modelCount
+    }
+}
+
+

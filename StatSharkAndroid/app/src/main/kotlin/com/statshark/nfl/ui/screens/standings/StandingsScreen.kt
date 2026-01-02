@@ -19,7 +19,6 @@ import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.statshark.nfl.data.model.DivisionStandings
-import com.statshark.nfl.ui.components.FeedbackButton
 
 /**
  * Standings Screen
@@ -43,7 +42,6 @@ fun StandingsScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
-                    FeedbackButton(pageName = "Standings")
                     IconButton(onClick = { viewModel.retry() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }

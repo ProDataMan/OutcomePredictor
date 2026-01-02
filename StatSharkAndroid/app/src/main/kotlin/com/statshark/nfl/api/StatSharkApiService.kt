@@ -65,6 +65,18 @@ interface StatSharkApiService {
     suspend fun markFeedbackAsRead(
         @Body request: MarkFeedbackReadDTO
     ): Response<Unit>
+
+    // Weather endpoints
+    @GET("weather/{gameId}")
+    suspend fun getWeather(
+        @Path("gameId") gameId: String
+    ): GameWeatherDTO
+
+    // Injury endpoints
+    @GET("injuries/{gameId}")
+    suspend fun getInjuries(
+        @Path("gameId") gameId: String
+    ): GameInjuryResponseDTO
 }
 
 /**

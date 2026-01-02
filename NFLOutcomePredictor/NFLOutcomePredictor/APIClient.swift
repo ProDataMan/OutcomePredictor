@@ -569,4 +569,66 @@ final class APIClient: ObservableObject {
             throw APIError.httpError(statusCode: httpResponse.statusCode)
         }
     }
+
+    // MARK: - Weather API Methods
+
+    /// Fetches weather forecast for a specific game.
+    func fetchWeather(gameId: String) async throws -> GameWeatherDTO {
+        do {
+            let url = URL(string: "\(baseURL)/weather/\(gameId)")!
+            let (data, response) = try await urlSession.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                throw APIError.httpError(statusCode: httpResponse.statusCode)
+            }
+
+            return try decoder.decode(GameWeatherDTO.self, from: data)
+        } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
+            ErrorHandler.shared.handle(error, context: "Failed to fetch weather for game \(gameId)")
+            throw error
+        }
+    }
+
+    // MARK: - Injury API Methods
+
+    /// Fetches injury report for a specific game.
+    func fetchInjuries(gameId: String) async throws -> GameInjuryReportDTO {
+        do {
+            let url = URL(string: "\(baseURL)/injuries/\(gameId)")!
+            let (data, response) = try await urlSession.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+
+            guard httpResponse.statusCode == 200 else {
+                throw APIError.httpError(statusCode: httpResponse.statusCode)
+            }
+
+            return try decoder.decode(GameInjuryReportDTO.self, from: data)
+        } catch {
+            if let urlErr = error as? URLError, urlErr.code == .cancelled {
+                throw error
+            }
+
+            if error is CancellationError {
+                throw error
+            }
+
+            ErrorHandler.shared.handle(error, context: "Failed to fetch injuries for game \(gameId)")
+            throw error
+        }
+    }
 }

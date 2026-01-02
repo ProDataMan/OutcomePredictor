@@ -36,8 +36,21 @@ fun FantasyPlayerCard(
     team: TeamDTO,
     viewModel: FantasyViewModel
 ) {
-    val isOnRoster = viewModel.isOnRoster(player.id)
-    val isPositionFull = viewModel.isPositionFull(player.position)
+    val uiState by viewModel.uiState.collectAsState()
+    val isOnRoster = remember(uiState.roster, player.id) {
+        uiState.roster.allPlayers.any { it.id == player.id }
+    }
+    val isPositionFull = remember(uiState.roster, player.position) {
+        when (player.position) {
+            "QB" -> uiState.roster.quarterbacks.size >= FantasyRoster.MAX_QBS
+            "RB" -> uiState.roster.runningBacks.size >= FantasyRoster.MAX_RBS
+            "WR" -> uiState.roster.wideReceivers.size >= FantasyRoster.MAX_WRS
+            "TE" -> uiState.roster.tightEnds.size >= FantasyRoster.MAX_TES
+            "K" -> uiState.roster.kickers.size >= FantasyRoster.MAX_KS
+            "DEF" -> uiState.roster.defense.size >= FantasyRoster.MAX_DEF
+            else -> true
+        }
+    }
     val fantasyPlayer = remember(player, team) { com.statshark.nfl.data.model.FantasyPlayer.from(player, team) }
 
     Card(

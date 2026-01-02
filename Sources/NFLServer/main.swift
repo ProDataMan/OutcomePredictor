@@ -542,6 +542,103 @@ func routes(_ app: Application) throws {
         return MessageResponse(message: "Marked \(feedbackIds.count) feedback items as read")
     }
 
+    // GET /api/v1/weather/:gameId - Get weather forecast for a game
+    api.get("weather", ":gameId") { req async throws -> GameWeatherDTOResponse in
+        guard let gameId = req.parameters.get("gameId") else {
+            throw Abort(.badRequest, reason: "Missing game ID")
+        }
+
+        // Get the game details
+        guard let dataLoader = req.application.storage[DataLoaderKey.self] else {
+            throw Abort(.internalServerError, reason: "Data loader not initialized")
+        }
+
+        let allGames = try await dataLoader.loadLiveScores()
+        guard let game = allGames.first(where: { $0.id.uuidString == gameId }) else {
+            throw Abort(.notFound, reason: "Game not found")
+        }
+
+        // Get weather service
+        guard let weatherService = req.application.storage[WeatherServiceKey.self] else {
+            throw Abort(.serviceUnavailable, reason: "Weather service not configured")
+        }
+
+        // Fetch weather for the game
+        let location = game.homeTeam.name
+        let weatherConditions = try await weatherService.fetchWeather(for: location, at: game.scheduledDate)
+
+        // Convert to response DTO
+        return GameWeatherDTOResponse(
+            temperature: weatherConditions.temperature,
+            condition: weatherConditions.description.capitalized,
+            windSpeed: weatherConditions.windSpeed,
+            precipitation: weatherConditions.precipitationProbability * 100, // Convert to percentage
+            humidity: 55.0, // OpenWeatherMap requires paid tier for humidity in forecast
+            timestamp: weatherConditions.forecastTime
+        )
+    }
+
+    // GET /api/v1/injuries/:gameId - Get injury report for a game
+    api.get("injuries", ":gameId") { req async throws -> GameInjuryResponse in
+        guard let gameId = req.parameters.get("gameId") else {
+            throw Abort(.badRequest, reason: "Missing game ID")
+        }
+
+        // Get the game details
+        guard let dataLoader = req.application.storage[DataLoaderKey.self] else {
+            throw Abort(.internalServerError, reason: "Data loader not initialized")
+        }
+
+        let allGames = try await dataLoader.loadLiveScores()
+        guard let game = allGames.first(where: { $0.id.uuidString == gameId }) else {
+            throw Abort(.notFound, reason: "Game not found")
+        }
+
+        // Get current season
+        let currentYear = Calendar.current.component(.year, from: Date())
+
+        // Create injury tracker
+        let injuryDataSource = ESPNInjuryDataSource()
+        let injuryTracker = InjuryTracker(dataSource: injuryDataSource)
+
+        // Fetch injuries for both teams
+        let homeReport = try await injuryTracker.getInjuries(for: game.homeTeam, season: currentYear)
+        let awayReport = try await injuryTracker.getInjuries(for: game.awayTeam, season: currentYear)
+
+        // Convert to DTOs
+        let homeReportDTO = TeamInjuryReportDTOResponse(
+            team: TeamDTO(from: game.homeTeam),
+            injuries: homeReport.injuries.map { injury in
+                InjuredPlayerDTOResponse(
+                    name: injury.name,
+                    position: injury.position.rawValue,
+                    status: injury.status.rawValue,
+                    description: injury.description
+                )
+            },
+            fetchedAt: homeReport.fetchedAt
+        )
+
+        let awayReportDTO = TeamInjuryReportDTOResponse(
+            team: TeamDTO(from: game.awayTeam),
+            injuries: awayReport.injuries.map { injury in
+                InjuredPlayerDTOResponse(
+                    name: injury.name,
+                    position: injury.position.rawValue,
+                    status: injury.status.rawValue,
+                    description: injury.description
+                )
+            },
+            fetchedAt: awayReport.fetchedAt
+        )
+
+        return GameInjuryResponse(
+            homeTeam: homeReportDTO,
+            awayTeam: awayReportDTO,
+            gameId: gameId
+        )
+    }
+
     // Catch-all route for 404 errors (must be last)
     app.get("**") { req async throws -> Response in
         try await req.fileio.asyncStreamFile(at: "\(req.application.directory.publicDirectory)404.html")
@@ -585,5 +682,33 @@ struct OddsCacheStats: Content {
 
 struct MessageResponse: Content {
     let message: String
+}
+
+struct GameWeatherDTOResponse: Content {
+    let temperature: Double
+    let condition: String
+    let windSpeed: Double
+    let precipitation: Double
+    let humidity: Double
+    let timestamp: Date
+}
+
+struct GameInjuryResponse: Content {
+    let homeTeam: TeamInjuryReportDTOResponse
+    let awayTeam: TeamInjuryReportDTOResponse
+    let gameId: String
+}
+
+struct TeamInjuryReportDTOResponse: Content {
+    let team: TeamDTO
+    let injuries: [InjuredPlayerDTOResponse]
+    let fetchedAt: Date
+}
+
+struct InjuredPlayerDTOResponse: Content {
+    let name: String
+    let position: String
+    let status: String
+    let description: String?
 }
 

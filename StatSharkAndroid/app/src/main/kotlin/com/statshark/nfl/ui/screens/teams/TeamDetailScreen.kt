@@ -38,6 +38,7 @@ import com.statshark.nfl.ui.navigation.Screen
 import com.statshark.nfl.ui.theme.TeamColors
 import com.statshark.nfl.ui.components.FeedbackButton
 import com.statshark.nfl.data.cache.ArticleCache
+import com.statshark.nfl.data.cache.GameCache
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -93,7 +94,7 @@ fun TeamDetailScreen(
             LoadingScreen(modifier = Modifier.padding(paddingValues))
         } else {
             var selectedTab by remember { mutableIntStateOf(0) }
-            val tabs = listOf("Roster", "Games", "News")
+            val tabs = listOf("Roster", "News")
 
             Column(
                 modifier = Modifier
@@ -118,12 +119,10 @@ fun TeamDetailScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                                 .clickable {
-                                    // Navigate to predictions with pre-selected teams
+                                    // Cache the game and navigate directly to game detail (which shows predictions)
+                                    GameCache.put(game)
                                     navController.navigate(
-                                        Screen.Predictions.createRoute(
-                                            homeTeam = game.homeTeam.abbreviation,
-                                            awayTeam = game.awayTeam.abbreviation
-                                        )
+                                        Screen.GameDetail.createRoute(game.id)
                                     )
                                 },
                             colors = CardDefaults.cardColors(
@@ -181,17 +180,7 @@ fun TeamDetailScreen(
                             navController.navigate(Screen.PlayerDetail.createRoute(player.id, team.abbreviation))
                         }
                     )
-                    1 -> GamesTab(
-                        games = uiState.games,
-                        teamAbbreviation = team.abbreviation,
-                        isLoading = uiState.isLoadingGames,
-                        error = uiState.gamesError,
-                        onRetry = { viewModel.retry() },
-                        onGameClick = { game ->
-                            navController.navigate(Screen.GameDetail.createRoute(game.id))
-                        }
-                    )
-                    2 -> NewsTab(
+                    1 -> NewsTab(
                         news = uiState.news,
                         isLoading = uiState.isLoadingNews,
                         error = uiState.newsError,

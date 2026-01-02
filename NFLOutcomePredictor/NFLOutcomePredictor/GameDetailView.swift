@@ -15,6 +15,9 @@ struct GameDetailView: View {
     @State private var historicalGames: [GameDTO] = []
     @State private var isLoadingHistory = false
     @State private var liveScoreTimer: Timer?
+    @State private var homeInjuryReport: TeamInjuryReportDTO?
+    @State private var awayInjuryReport: TeamInjuryReportDTO?
+    @State private var isLoadingInjuries = false
 
     init(game: GameDTO, sourceTeam: TeamDTO? = nil) {
         self.initialGame = game
@@ -74,6 +77,11 @@ struct GameDetailView: View {
                     weatherCard
                 }
 
+                // Injury report (for upcoming games)
+                if !isCompleted {
+                    injuryCard
+                }
+
                 // Game stats (if completed)
                 if isCompleted {
                     gameStatsCard
@@ -102,6 +110,7 @@ struct GameDetailView: View {
             await loadUpcomingGames()
             await loadNews()
             await loadHistoricalMatchup()
+            await loadInjuries()
         }
         .onAppear {
             startLiveScoreUpdates()
@@ -228,8 +237,29 @@ struct GameDetailView: View {
 
     private var weatherCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Weather Forecast")
-                .font(.headline)
+            HStack {
+                Text("Weather Forecast")
+                    .font(.headline)
+
+                Spacer()
+
+                if let weather = weather {
+                    NavigationLink(destination: WeatherDetailView(
+                        game: game,
+                        weather: weather,
+                        homeTeamStats: nil,  // TODO: Load from API
+                        awayTeamStats: nil   // TODO: Load from API
+                    )) {
+                        HStack(spacing: 4) {
+                            Text("Details")
+                                .font(.subheadline)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
 
             if isLoadingWeather {
                 ProgressView()
@@ -306,6 +336,132 @@ struct GameDetailView: View {
         case let c where c.contains("snow"): return "cloud.snow.fill"
         case let c where c.contains("storm"): return "cloud.bolt.fill"
         default: return "cloud.sun.fill"
+        }
+    }
+
+    // MARK: - Injury Report
+
+    private var injuryCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Injury Report")
+                    .font(.headline)
+
+                Spacer()
+
+                if let homeReport = homeInjuryReport, let awayReport = awayInjuryReport {
+                    NavigationLink(destination: InjuryDetailView(
+                        game: game,
+                        homeTeamReport: homeReport,
+                        awayTeamReport: awayReport
+                    )) {
+                        HStack(spacing: 4) {
+                            Text("Details")
+                                .font(.subheadline)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.accentColor)
+                    }
+                }
+            }
+
+            if isLoadingInjuries {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            } else if let homeReport = homeInjuryReport, let awayReport = awayInjuryReport {
+                VStack(spacing: 12) {
+                    // Home team injuries
+                    teamInjurySummary(
+                        team: game.homeTeam,
+                        report: homeReport
+                    )
+
+                    Divider()
+
+                    // Away team injuries
+                    teamInjurySummary(
+                        team: game.awayTeam,
+                        report: awayReport
+                    )
+                }
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: "cross.case.fill")
+                        .font(.title)
+                        .foregroundColor(.secondary)
+                    Text("Injury report unavailable")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+
+    private func teamInjurySummary(team: TeamDTO, report: TeamInjuryReportDTO) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(team.abbreviation)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+
+                Spacer()
+
+                if report.injuries.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.caption)
+                        Text("No injuries")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+                } else {
+                    Text("\(report.injuries.count) \(report.injuries.count == 1 ? "injury" : "injuries")")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            if !report.keyInjuries.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(report.keyInjuries.prefix(3), id: \.name) { injury in
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2)
+                                .foregroundColor(.orange)
+
+                            Text("\(injury.name) (\(injury.position))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Spacer()
+
+                            Text(injury.status)
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.red)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(4)
+                        }
+                    }
+
+                    if report.keyInjuries.count > 3 {
+                        Text("+\(report.keyInjuries.count - 3) more")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 18)
+                    }
+                }
+            }
         }
     }
 
@@ -696,6 +852,11 @@ struct GameDetailView: View {
                         }
                     }
 
+                    // Confidence Breakdown
+                    if let breakdown = prediction.confidenceBreakdown {
+                        confidenceBreakdownView(breakdown: breakdown)
+                    }
+
                     // Confidence bar
                     VStack(spacing: 8) {
                         HStack {
@@ -779,7 +940,10 @@ struct GameDetailView: View {
             } else {
                 VStack(spacing: 8) {
                     ForEach(news.prefix(3)) { article in
-                        NewsCardView(article: article)
+                        NavigationLink(destination: ArticleDetailView(article: article)) {
+                            NewsCardView(article: article)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
             }
@@ -791,6 +955,74 @@ struct GameDetailView: View {
     }
 
     // MARK: - Helpers
+
+    private func confidenceBreakdownView(breakdown: PredictionConfidenceBreakdown) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Confidence Breakdown")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+
+            ForEach(breakdown.factors) { factor in
+                confidenceFactorRow(factor: factor)
+            }
+        }
+        .padding()
+        .background(Color(.tertiarySystemBackground))
+        .cornerRadius(8)
+    }
+
+    private func confidenceFactorRow(factor: ConfidenceFactor) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                // Category icon
+                Image(systemName: categoryIcon(for: factor.category))
+                    .foregroundColor(factor.favorsWinner ? .green : .red)
+                    .frame(width: 20)
+
+                Text(factor.name)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+
+                Spacer()
+
+                Text(factor.favorsWinner ? "+\(Int(factor.impactPercentage))%" : "-\(Int(factor.impactPercentage))%")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(factor.favorsWinner ? .green : .red)
+            }
+
+            Text(factor.description)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+
+            // Impact bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(height: 4)
+
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(factor.favorsWinner ? Color.green : Color.red)
+                        .frame(width: geometry.size.width * abs(factor.impact), height: 4)
+                }
+            }
+            .frame(height: 4)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func categoryIcon(for category: String) -> String {
+        switch category {
+        case "historical": return "clock.arrow.circlepath"
+        case "injuries": return "cross.case.fill"
+        case "momentum": return "arrow.up.right"
+        case "weather": return "cloud.sun.fill"
+        case "travel": return "airplane"
+        default: return "chart.bar.fill"
+        }
+    }
+
 
     private var locationName: String {
         // Extract city from team name for home team
@@ -940,6 +1172,55 @@ struct GameDetailView: View {
         }
 
         isLoadingHistory = false
+    }
+
+    private func loadInjuries() async {
+        guard !isCompleted else { return } // Don't fetch injuries for completed games
+
+        isLoadingInjuries = true
+
+        // For now, generate sample injury data
+        // In production, this would call an injury API
+        try? await Task.sleep(nanoseconds: 500_000_000) // Simulate API call
+
+        // Sample injury data
+        let homeInjuries: [InjuredPlayerDTO] = Bool.random() ? [] : [
+            InjuredPlayerDTO(
+                name: "Starter QB",
+                position: "QB",
+                status: ["Questionable", "Doubtful", "Out"].randomElement() ?? "Questionable",
+                description: "Ankle injury"
+            ),
+            InjuredPlayerDTO(
+                name: "Top WR",
+                position: "WR",
+                status: "Questionable",
+                description: "Hamstring"
+            )
+        ]
+
+        let awayInjuries: [InjuredPlayerDTO] = Bool.random() ? [] : [
+            InjuredPlayerDTO(
+                name: "Running Back",
+                position: "RB",
+                status: "Out",
+                description: "Knee injury"
+            )
+        ]
+
+        homeInjuryReport = TeamInjuryReportDTO(
+            team: game.homeTeam,
+            injuries: homeInjuries,
+            fetchedAt: Date()
+        )
+
+        awayInjuryReport = TeamInjuryReportDTO(
+            team: game.awayTeam,
+            injuries: awayInjuries,
+            fetchedAt: Date()
+        )
+
+        isLoadingInjuries = false
     }
 
     // MARK: - Live Score Updates
@@ -1172,21 +1453,8 @@ struct UpcomingGameCard: View {
 // NewsCardView for displaying news articles
 struct NewsCardView: View {
     let article: ArticleDTO
-    @State private var isPressed = false
 
     var body: some View {
-        Group {
-            if let urlString = article.url, let url = URL(string: urlString) {
-                Link(destination: url) {
-                    newsContent
-                }
-            } else {
-                newsContent
-            }
-        }
-    }
-
-    private var newsContent: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(article.title)
@@ -1217,13 +1485,11 @@ struct NewsCardView: View {
 
             Spacer()
 
-            // Chevron indicator for clickable articles
-            if article.url != nil {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.accentColor)
-                    .fontWeight(.semibold)
-            }
+            // Chevron indicator for navigation
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.accentColor)
+                .fontWeight(.semibold)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -1231,7 +1497,7 @@ struct NewsCardView: View {
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(article.url != nil ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
         )
     }
 }

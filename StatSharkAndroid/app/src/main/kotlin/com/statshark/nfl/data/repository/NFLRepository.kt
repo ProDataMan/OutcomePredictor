@@ -402,4 +402,32 @@ class NFLRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    // MARK: - Weather Methods
+
+    /**
+     * Fetch weather forecast for a game
+     */
+    suspend fun getWeather(gameId: String): Result<GameWeatherDTO> = withContext(Dispatchers.IO) {
+        try {
+            val weather = apiService.getWeather(gameId)
+            Result.success(weather)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // MARK: - Injury Methods
+
+    /**
+     * Fetch injury report for a game
+     */
+    suspend fun getInjuries(gameId: String): Result<GameInjuryResponseDTO> = withContext(Dispatchers.IO) {
+        try {
+            val injuries = apiService.getInjuries(gameId)
+            Result.success(injuries)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
