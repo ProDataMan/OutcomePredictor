@@ -49,7 +49,7 @@ public actor OpenWeatherMapService: WeatherService {
         "Dallas": StadiumInfo(city: "Arlington", state: "TX", lat: 32.7473, lon: -97.0945, isIndoor: true),
         "New York Giants": StadiumInfo(city: "East Rutherford", state: "NJ", lat: 40.8128, lon: -74.0742, isIndoor: false),
         "Philadelphia": StadiumInfo(city: "Philadelphia", state: "PA", lat: 39.9008, lon: -75.1675, isIndoor: false),
-        "Washington": StadiumInfo(city: "Landover", state: "MD", lat: 38.9076, lon: -76.8645, isIndoor: false),
+        "Washington Commanders": StadiumInfo(city: "Landover", state: "MD", lat: 38.9076, lon: -76.8645, isIndoor: false),
 
         // NFC North
         "Chicago": StadiumInfo(city: "Chicago", state: "IL", lat: 41.8623, lon: -87.6167, isIndoor: false),

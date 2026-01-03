@@ -148,8 +148,8 @@ fun QuarterbackStatsComparison(p1: PlayerDTO, p2: PlayerDTO) {
         StatComparisonRow("Passing Yards", p1.stats?.passingYards, p2.stats?.passingYards)
         StatComparisonRow("Passing TDs", p1.stats?.passingTouchdowns, p2.stats?.passingTouchdowns)
         StatComparisonRow("Interceptions", p1.stats?.interceptions, p2.stats?.interceptions, lowerIsBetter = true)
-        val comp1 = if (p1.stats?.attempts != null && p1.stats.attempts!! > 0) ((p1.stats.completions ?: 0) * 100) / p1.stats.attempts!! else null
-        val comp2 = if (p2.stats?.attempts != null && p2.stats.attempts!! > 0) ((p2.stats.completions ?: 0) * 100) / p2.stats.attempts!! else null
+        val comp1 = if (p1.stats?.passingAttempts != null && p1.stats.passingAttempts!! > 0) ((p1.stats.passingCompletions ?: 0) * 100) / p1.stats.passingAttempts!! else null
+        val comp2 = if (p2.stats?.passingAttempts != null && p2.stats.passingAttempts!! > 0) ((p2.stats.passingCompletions ?: 0) * 100) / p2.stats.passingAttempts!! else null
         StatComparisonRow("Completion %", comp1, comp2)
     }
 }

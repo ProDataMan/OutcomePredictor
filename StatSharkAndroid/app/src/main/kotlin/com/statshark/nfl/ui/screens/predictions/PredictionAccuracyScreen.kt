@@ -108,7 +108,7 @@ fun OverallAccuracySection(accuracy: PredictionAccuracyDTO) {
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "${accuracy.overallAccuracy.toInt()}%",
+                    "${if (accuracy.overallAccuracy.isNaN() || accuracy.overallAccuracy.isInfinite()) 0 else accuracy.overallAccuracy.toInt()}%",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                     color = getAccuracyColor(accuracy.overallAccuracy)
@@ -262,7 +262,7 @@ fun WeeklyAccuracyCard(week: WeeklyAccuracyDTO) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "${week.accuracy.toInt()}%",
+                    "${if (week.accuracy.isNaN() || week.accuracy.isInfinite()) 0 else week.accuracy.toInt()}%",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -324,7 +324,7 @@ fun ConfidenceBreakdownCard(breakdown: ConfidenceAccuracyDTO) {
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        "${breakdown.accuracy.toInt()}%",
+                        "${if (breakdown.accuracy.isNaN() || breakdown.accuracy.isInfinite()) 0 else breakdown.accuracy.toInt()}%",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = getAccuracyColor(breakdown.accuracy)

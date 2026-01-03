@@ -127,7 +127,7 @@ struct StandingsView: View {
                                 Text("\(standings.season) Season")
                                     .font(.title2)
                                     .fontWeight(.bold)
-                                Text("Updated \(standings.lastUpdated, style: .relative) ago")
+                                Text("Last updated: \(standings.lastUpdated)")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }

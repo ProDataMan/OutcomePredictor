@@ -25,17 +25,16 @@ data class TeamDTO(
 @Serializable
 data class GameDTO(
     val id: String,
-    @SerializedName("home_team")
+    @SerializedName("homeTeam")
     val homeTeam: TeamDTO,
-    @SerializedName("away_team")
+    @SerializedName("awayTeam")
     val awayTeam: TeamDTO,
-    @SerializedName("home_score")
+    @SerializedName("homeScore")
     val homeScore: Int? = null,
-    @SerializedName("away_score")
+    @SerializedName("awayScore")
     val awayScore: Int? = null,
+    @SerializedName("scheduledDate")
     val date: String,
-    @SerializedName("scheduled_date")
-    val scheduledDate: String,
     val week: Int,
     val season: Int,
     val status: String? = null,

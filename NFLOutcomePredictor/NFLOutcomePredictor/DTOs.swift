@@ -457,13 +457,6 @@ public struct PlayerDTO: Codable, Sendable, Identifiable {
     public let college: String?
     public let experience: Int?
 
-    // Special case: photoURL needs explicit mapping because convertFromSnakeCase
-    // converts photo_url → photoUrl (lowercase), but Swift convention is photoURL (uppercase)
-    enum CodingKeys: String, CodingKey {
-        case id, name, position, jerseyNumber, stats, height, weight, age, college, experience
-        case photoURL = "photoUrl"  // convertFromSnakeCase gives us photoUrl, not photoURL
-    }
-
     public init(
         id: String,
         name: String,

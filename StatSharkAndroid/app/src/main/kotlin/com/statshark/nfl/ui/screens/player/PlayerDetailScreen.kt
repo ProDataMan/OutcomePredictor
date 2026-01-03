@@ -304,10 +304,10 @@ fun QuarterbackStats(stats: PlayerStatsDTO) {
                     stats.completionPercentage?.let {
                         item { StatCard(label = "Completion %", value = String.format("%.1f%%", it)) }
                     }
-                    stats.completions?.let {
+                    stats.passingCompletions?.let {
                         item { StatCard(label = "Completions", value = it.toString()) }
                     }
-                    stats.attempts?.let {
+                    stats.passingAttempts?.let {
                         item { StatCard(label = "Attempts", value = it.toString()) }
                     }
                 }

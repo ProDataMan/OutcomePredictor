@@ -90,12 +90,22 @@ class TeamDetailViewModel @Inject constructor(
 
             repository.getTeamRoster(teamId, season).fold(
                 onSuccess = { rosterDTO ->
-                    _uiState.value = _uiState.value.copy(
-                        players = rosterDTO.players,
-                        isLoadingRoster = false
-                    )
+                    try {
+                        _uiState.value = _uiState.value.copy(
+                            players = rosterDTO.players,
+                            isLoadingRoster = false
+                        )
+                        android.util.Log.d("TeamDetailVM", "Loaded ${rosterDTO.players.size} players for $teamId season $season")
+                    } catch (e: Exception) {
+                        android.util.Log.e("TeamDetailVM", "Error processing roster: ${e.message}", e)
+                        _uiState.value = _uiState.value.copy(
+                            isLoadingRoster = false,
+                            rosterError = "Error processing roster: ${e.message}"
+                        )
+                    }
                 },
                 onFailure = { error ->
+                    android.util.Log.e("TeamDetailVM", "Error loading roster for $teamId season $season: ${error.message}", error)
                     _uiState.value = _uiState.value.copy(
                         isLoadingRoster = false,
                         rosterError = error.message ?: "Failed to load roster"
@@ -114,12 +124,22 @@ class TeamDetailViewModel @Inject constructor(
 
             repository.getTeamGames(team, season).fold(
                 onSuccess = { games ->
-                    _uiState.value = _uiState.value.copy(
-                        games = games.sortedByDescending { it.date },
-                        isLoadingGames = false
-                    )
+                    try {
+                        _uiState.value = _uiState.value.copy(
+                            games = games.sortedByDescending { it.date },
+                            isLoadingGames = false
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("TeamDetailVM", "Error sorting games: ${e.message}", e)
+                        _uiState.value = _uiState.value.copy(
+                            games = games, // Use unsorted if sorting fails
+                            isLoadingGames = false,
+                            gamesError = "Error processing games: ${e.message}"
+                        )
+                    }
                 },
                 onFailure = { error ->
+                    android.util.Log.e("TeamDetailVM", "Error loading games for $team season $season: ${error.message}", error)
                     _uiState.value = _uiState.value.copy(
                         isLoadingGames = false,
                         gamesError = error.message ?: "Failed to load games"
@@ -157,10 +177,19 @@ class TeamDetailViewModel @Inject constructor(
      * Change season
      */
     fun changeSeason(season: Int) {
-        _uiState.value = _uiState.value.copy(selectedSeason = season)
-        _uiState.value.team?.let { team ->
-            loadRoster(team.abbreviation, season)
-            loadGames(team.abbreviation, season)
+        try {
+            android.util.Log.d("TeamDetailVM", "Changing season to $season")
+            _uiState.value = _uiState.value.copy(selectedSeason = season)
+            _uiState.value.team?.let { team ->
+                loadRoster(team.abbreviation, season)
+                loadGames(team.abbreviation, season)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("TeamDetailVM", "Error changing season to $season: ${e.message}", e)
+            _uiState.value = _uiState.value.copy(
+                rosterError = "Error changing season: ${e.message}",
+                gamesError = "Error changing season: ${e.message}"
+            )
         }
     }
 

@@ -261,7 +261,7 @@ fun ModelPredictionCard(model: PredictionModelDTO, game: GameDTO) {
                 model.accuracy?.let { accuracy ->
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            "${accuracy.overallAccuracy.toInt()}%",
+                            "${if (accuracy.overallAccuracy.isNaN() || accuracy.overallAccuracy.isInfinite()) 0 else accuracy.overallAccuracy.toInt()}%",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = getModelAccuracyColor(accuracy.overallAccuracy)

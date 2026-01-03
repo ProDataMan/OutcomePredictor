@@ -209,7 +209,7 @@ public struct NFLStadiums {
         "Dallas": StadiumLocation(city: "Arlington", state: "TX", latitude: 32.7473, longitude: -97.0945, timeZone: -6),
         "New York Giants": StadiumLocation(city: "East Rutherford", state: "NJ", latitude: 40.8128, longitude: -74.0742, timeZone: -5),
         "Philadelphia": StadiumLocation(city: "Philadelphia", state: "PA", latitude: 39.9008, longitude: -75.1675, timeZone: -5),
-        "Washington": StadiumLocation(city: "Landover", state: "MD", latitude: 38.9076, longitude: -76.8645, timeZone: -5),
+        "Washington Commanders": StadiumLocation(city: "Landover", state: "MD", latitude: 38.9076, longitude: -76.8645, timeZone: -5),
 
         // NFC North (Central Time: UTC-6)
         "Chicago": StadiumLocation(city: "Chicago", state: "IL", latitude: 41.8623, longitude: -87.6167, timeZone: -6),
