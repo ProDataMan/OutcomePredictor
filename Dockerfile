@@ -3,13 +3,13 @@ FROM swift:6.0-jammy as build
 
 WORKDIR /app
 
-# Copy package manifest first for dependency caching
-COPY Package.swift ./
+# Copy package manifests for dependency caching
+COPY Package.swift Package.resolved* ./
 
-# Resolve dependencies first (this creates Package.resolved)
+# Resolve dependencies first (cached layer if Package.resolved unchanged)
 RUN swift package resolve
 
-# Copy source code
+# Copy source code (only rebuilds if source changes)
 COPY Sources ./Sources
 COPY Tests ./Tests
 COPY Public ./Public
