@@ -194,11 +194,15 @@ public actor APISportsDataSource: Sendable {
             return nil
         }
 
-        print("✅ Found statistics for position \(position): \(seasonStats)")
+        print("✅ Found statistics for position \(position):")
+        print("   - Team: \(seasonStats.team?.name ?? "nil"), Season: \(seasonStats.season ?? "nil")")
+        print("   - Passing: \(seasonStats.games.passing?.yards ?? 0) yds, \(seasonStats.games.passing?.touchdowns ?? 0) TDs")
+        print("   - Rushing: \(seasonStats.games.rushing?.yards ?? 0) yds, \(seasonStats.games.rushing?.touchdowns ?? 0) TDs")
+        print("   - Receiving: \(seasonStats.games.receiving?.yards ?? 0) yds, \(seasonStats.games.receiving?.touchdowns ?? 0) TDs")
 
         let games = seasonStats.games
 
-        return PlayerStats(
+        let playerStats = PlayerStats(
             passingYards: games.passing?.yards,
             passingTouchdowns: games.passing?.touchdowns,
             passingInterceptions: games.passing?.interceptions,
@@ -215,6 +219,21 @@ public actor APISportsDataSource: Sendable {
             sacks: games.defense?.sacks,
             interceptions: games.defense?.interceptions
         )
+
+        // Check if all fields are nil - if so, return nil instead of empty stats
+        let hasAnyStats = [
+            playerStats.passingYards, playerStats.passingTouchdowns,
+            playerStats.rushingYards, playerStats.rushingTouchdowns,
+            playerStats.receivingYards, playerStats.receivingTouchdowns,
+            playerStats.tackles
+        ].contains(where: { $0 != nil && $0 != 0 })
+
+        if !hasAnyStats {
+            print("⚠️ All stats are nil/zero for position \(position)")
+            return nil
+        }
+
+        return playerStats
     }
 
     /// Normalize position names from API-Sports to NFL standard positions.
