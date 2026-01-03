@@ -51,15 +51,13 @@ data class PlayerDTO(
     val id: String,
     val name: String,
     val position: String,
-    @SerializedName("jersey_number")
-    val jerseyNumber: Int? = null,
+    val jerseyNumber: String? = null,  // Changed from Int to String to match backend
     val height: String? = null,
     val weight: Int? = null,
     val age: Int? = null,
     val college: String? = null,
     val experience: Int? = null,
-    @SerializedName("photo_url")
-    val photoURL: String? = null,
+    val photoURL: String? = null,  // camelCase to match backend
     val stats: PlayerStatsDTO? = null
 )
 
@@ -69,26 +67,19 @@ data class PlayerDTO(
 @Serializable
 data class PlayerStatsDTO(
     // Passing stats
-    @SerializedName("passing_yards")
     val passingYards: Int? = null,
-    @SerializedName("passing_touchdowns")
     val passingTouchdowns: Int? = null,
-    val interceptions: Int? = null,
-    val completions: Int? = null,
-    val attempts: Int? = null,
+    val passingInterceptions: Int? = null,
+    val passingCompletions: Int? = null,
+    val passingAttempts: Int? = null,
 
     // Rushing stats
-    @SerializedName("rushing_yards")
     val rushingYards: Int? = null,
-    @SerializedName("rushing_touchdowns")
     val rushingTouchdowns: Int? = null,
-    @SerializedName("rushing_attempts")
     val rushingAttempts: Int? = null,
 
     // Receiving stats
-    @SerializedName("receiving_yards")
     val receivingYards: Int? = null,
-    @SerializedName("receiving_touchdowns")
     val receivingTouchdowns: Int? = null,
     val receptions: Int? = null,
     val targets: Int? = null,
@@ -96,27 +87,33 @@ data class PlayerStatsDTO(
     // Defensive stats
     val tackles: Int? = null,
     val sacks: Double? = null,
-    @SerializedName("defensive_interceptions")
-    val defensiveInterceptions: Int? = null,
-    @SerializedName("forced_fumbles")
-    val forcedFumbles: Int? = null,
+    val interceptions: Int? = null,  // Changed from defensiveInterceptions
 
     // Kicking stats
-    @SerializedName("field_goals_made")
     val fieldGoalsMade: Int? = null,
-    @SerializedName("field_goals_attempted")
     val fieldGoalsAttempted: Int? = null,
-    @SerializedName("extra_points_made")
-    val extraPointsMade: Int? = null
+    val extraPointsMade: Int? = null,
+    val extraPointsAttempted: Int? = null
 ) {
+    // Computed properties
     val completionPercentage: Double?
-        get() = if (attempts != null && attempts > 0 && completions != null) {
-            (completions.toDouble() / attempts) * 100
+        get() = if (passingAttempts != null && passingAttempts > 0 && passingCompletions != null) {
+            (passingCompletions.toDouble() / passingAttempts.toDouble()) * 100.0
         } else null
 
     val yardsPerCarry: Double?
         get() = if (rushingAttempts != null && rushingAttempts > 0 && rushingYards != null) {
-            rushingYards.toDouble() / rushingAttempts
+            rushingYards.toDouble() / rushingAttempts.toDouble()
+        } else null
+
+    val catchPercentage: Double?
+        get() = if (targets != null && targets > 0 && receptions != null) {
+            (receptions.toDouble() / targets.toDouble()) * 100.0
+        } else null
+
+    val yardsPerReception: Double?
+        get() = if (receptions != null && receptions > 0 && receivingYards != null) {
+            receivingYards.toDouble() / receptions.toDouble()
         } else null
 }
 
