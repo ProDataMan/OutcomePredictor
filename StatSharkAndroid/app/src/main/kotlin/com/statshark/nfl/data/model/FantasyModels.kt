@@ -13,7 +13,7 @@ data class FantasyPlayer(
     val id: String,
     val name: String,
     val position: String,
-    val jerseyNumber: Int?,
+    val jerseyNumber: String?,  // Changed from Int? to String? to match PlayerDTO
     val photoURL: String?,
     val teamAbbreviation: String,
     val teamName: String,
