@@ -35,11 +35,11 @@ func configure(_ app: Application) async throws {
     // Configure JSON encoder/decoder
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
-    encoder.keyEncodingStrategy = .convertToSnakeCase
+    // Use default camelCase to match iOS/Android apps
 
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .iso8601
-    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    // Use default camelCase to match iOS/Android apps
 
     ContentConfiguration.global.use(encoder: encoder, for: .json)
     ContentConfiguration.global.use(decoder: decoder, for: .json)
