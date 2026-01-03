@@ -184,13 +184,17 @@ public actor APISportsDataSource: Sendable {
     /// Parse player statistics from API-Sports data.
     private func parsePlayerStats(from statistics: [APISportsPlayerStatistics]?, position: String) -> PlayerStats? {
         guard let stats = statistics, !stats.isEmpty else {
+            print("⚠️ No statistics array for position \(position)")
             return nil
         }
 
         // API-Sports provides season stats - use the first entry
         guard let seasonStats = stats.first else {
+            print("⚠️ Statistics array is empty for position \(position)")
             return nil
         }
+
+        print("✅ Found statistics for position \(position): \(seasonStats)")
 
         let games = seasonStats.games
 
