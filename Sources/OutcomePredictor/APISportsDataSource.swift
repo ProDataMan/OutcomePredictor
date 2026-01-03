@@ -49,11 +49,16 @@ public actor APISportsDataSource: Sendable {
 
     /// Fetch team roster with player stats and headshots for the season.
     ///
+    /// Uses dual-endpoint approach:
+    /// 1. Fetches player bio data from /players endpoint
+    /// 2. Fetches statistics from /players/statistics endpoint
+    /// 3. Merges both by player ID
+    ///
     /// Results are cached for 15 minutes to minimize API calls.
     ///
     /// - Parameters:
     ///   - team: NFL team to fetch roster for.
-    ///   - season: Season year (2022 or later for API-Sports).
+    ///   - season: Season year (2022 or later for API-Sports statistics).
     /// - Returns: Team roster with players, stats, and headshot URLs.
     /// - Throws: Network or parsing errors.
     public func fetchRoster(for team: Team, season: Int) async throws -> TeamRoster {
@@ -66,11 +71,33 @@ public actor APISportsDataSource: Sendable {
 
         print("📥 Fetching fresh roster from API-Sports for \(team.abbreviation) (season \(season))")
 
-        // API-Sports uses team IDs, so we need to map abbreviations to team IDs
         guard let teamID = getAPIFootballTeamID(abbreviation: team.abbreviation) else {
             throw DataSourceError.parsingError("Unknown API-Sports team ID for \(team.abbreviation)")
         }
 
+        // Fetch both bio data and statistics in parallel
+        async let bioData = fetchPlayerBioData(teamID: teamID, season: season)
+        async let statsData = fetchPlayerStatistics(teamID: teamID, season: season)
+
+        let (players, statistics) = try await (bioData, statsData)
+
+        // Merge bio and stats by player ID
+        let roster = mergePlayerData(bioData: players, statsData: statistics, team: team, season: season)
+
+        // Cache the result
+        let entry = RosterCacheEntry(
+            roster: roster,
+            timestamp: Date(),
+            expiresAt: Date().addingTimeInterval(cacheTTL)
+        )
+        rosterCache[cacheKey] = entry
+        print("💾 Cached roster for \(team.abbreviation) for \(Int(cacheTTL/60)) minutes")
+
+        return roster
+    }
+
+    /// Fetch player bio data from /players endpoint
+    private func fetchPlayerBioData(teamID: Int, season: Int) async throws -> [APISportsPlayerBioData] {
         let urlString = "\(baseURL)/players?team=\(teamID)&season=\(season)"
         guard let url = URL(string: urlString) else {
             throw DataSourceError.invalidURL(urlString)
@@ -93,147 +120,182 @@ public actor APISportsDataSource: Sendable {
             throw DataSourceError.httpError(httpResponse.statusCode)
         }
 
-        // Log raw response for debugging
-        if let jsonString = String(data: data, encoding: .utf8) {
-            print("📋 API-Sports raw response (first 500 chars): \(String(jsonString.prefix(500)))")
-        }
-
         let apiResponse = try JSONDecoder().decode(APISportsPlayersResponse.self, from: data)
+        print("📋 Fetched \(apiResponse.results) player bio records")
 
-        guard apiResponse.results > 0 else {
-            throw DataSourceError.noDataAvailable
-        }
-
-        let roster = parseRoster(from: apiResponse, team: team, season: season)
-
-        // Cache the result
-        let entry = RosterCacheEntry(
-            roster: roster,
-            timestamp: Date(),
-            expiresAt: Date().addingTimeInterval(cacheTTL)
-        )
-        rosterCache[cacheKey] = entry
-        print("💾 Cached roster for \(team.abbreviation) for \(Int(cacheTTL/60)) minutes")
-
-        return roster
+        return apiResponse.response
     }
 
-    /// Parse roster from API-Sports response.
-    private func parseRoster(from response: APISportsPlayersResponse, team: Team, season: Int) -> TeamRoster {
+    /// Fetch player statistics from /players/statistics endpoint
+    private func fetchPlayerStatistics(teamID: Int, season: Int) async throws -> [APISportsPlayerStatisticsData] {
+        let urlString = "\(baseURL)/players/statistics?team=\(teamID)&season=\(season)"
+        guard let url = URL(string: urlString) else {
+            throw DataSourceError.invalidURL(urlString)
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue(apiKey, forHTTPHeaderField: "x-apisports-key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw DataSourceError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            if httpResponse.statusCode == 429 {
+                throw DataSourceError.rateLimitExceeded
+            }
+            throw DataSourceError.httpError(httpResponse.statusCode)
+        }
+
+        let apiResponse = try JSONDecoder().decode(APISportsStatisticsResponse.self, from: data)
+        print("📊 Fetched \(apiResponse.results) player statistics records")
+
+        return apiResponse.response
+    }
+
+    /// Merge player bio data and statistics by player ID
+    private func mergePlayerData(
+        bioData: [APISportsPlayerBioData],
+        statsData: [APISportsPlayerStatisticsData],
+        team: Team,
+        season: Int
+    ) -> TeamRoster {
+        // Create a dictionary of statistics by player ID for quick lookup
+        var statsMap: [Int: APISportsPlayerStatisticsData] = [:]
+        for playerStats in statsData {
+            if let playerID = playerStats.player?.id {
+                statsMap[playerID] = playerStats
+            }
+        }
+
         var players: [Player] = []
+        var playersWithStats = 0
+        var playersWithoutStats = 0
         var playersWithPhotos = 0
         var playersWithoutPhotos = 0
 
-        for playerData in response.response {
-            guard let playerId = playerData.id,
-                  let playerName = playerData.name else {
+        for playerBio in bioData {
+            guard let playerID = playerBio.id,
+                  let playerName = playerBio.name else {
                 continue
             }
 
-            // Get position (API-Sports uses different position names)
-            let position = normalizePosition(playerData.position ?? "")
+            // Get position
+            let position = normalizePosition(playerBio.position ?? "")
 
-            // Parse statistics
-            let stats = parsePlayerStats(from: playerData.statistics, position: position)
+            // Get statistics for this player
+            let playerStatsData = statsMap[playerID]
+            let stats = parsePlayerStats(from: playerStatsData, position: position)
 
-            // Extract bio data from API-Sports (flat structure)
-            let age = playerData.age
-            let heightUS = playerData.height  // e.g., "6' 1\""
-            let weightUS = playerData.weight  // e.g., "340 lbs"
-
-            // Parse weight from string like "340 lbs" to Int
-            let weight: Int? = if let weightStr = weightUS {
-                Int(weightStr.components(separatedBy: CharacterSet.decimalDigits.inverted).joined())
+            if stats != nil {
+                playersWithStats += 1
             } else {
-                nil
+                playersWithoutStats += 1
             }
 
-            // Track photo URL availability
-            if let photoURL = playerData.image, !photoURL.isEmpty {
+            // Track photo URLs
+            if let photoURL = playerBio.image, !photoURL.isEmpty {
                 playersWithPhotos += 1
             } else {
                 playersWithoutPhotos += 1
             }
 
-            // Convert number to String for jerseyNumber
-            let jerseyNumberStr = playerData.number.map { String($0) }
+            // Parse weight
+            let weight: Int? = if let weightStr = playerBio.weight {
+                Int(weightStr.components(separatedBy: CharacterSet.decimalDigits.inverted).joined())
+            } else {
+                nil
+            }
+
+            let jerseyNumberStr = playerBio.number.map { String($0) }
 
             let nflPlayer = Player(
-                id: String(playerId),
+                id: String(playerID),
                 name: playerName,
                 position: position,
                 jerseyNumber: jerseyNumberStr,
-                photoURL: playerData.image,
+                photoURL: playerBio.image,
                 team: team,
                 stats: stats,
-                height: heightUS,
+                height: playerBio.height,
                 weight: weight,
-                age: age,
-                college: playerData.college,
-                experience: playerData.experience
+                age: playerBio.age,
+                college: playerBio.college,
+                experience: playerBio.experience
             )
 
             players.append(nflPlayer)
         }
 
-        print("📸 Photo URL stats for \(team.abbreviation): \(playersWithPhotos) with photos, \(playersWithoutPhotos) without photos")
+        print("📊 Stats summary: \(playersWithStats) with stats, \(playersWithoutStats) without stats")
+        print("📸 Photo URL stats: \(playersWithPhotos) with photos, \(playersWithoutPhotos) without photos")
 
         return TeamRoster(team: team, players: players, season: season)
     }
 
-    /// Parse player statistics from API-Sports data.
-    private func parsePlayerStats(from statistics: [APISportsPlayerStatistics]?, position: String) -> PlayerStats? {
-        guard let stats = statistics, !stats.isEmpty else {
-            print("⚠️ No statistics array for position \(position)")
+    /// Parse player statistics from API-Sports /players/statistics endpoint.
+    private func parsePlayerStats(from playerStatsData: APISportsPlayerStatisticsData?, position: String) -> PlayerStats? {
+        guard let statsData = playerStatsData,
+              let teams = statsData.teams,
+              let firstTeam = teams.first,
+              let groups = firstTeam.groups,
+              !groups.isEmpty else {
             return nil
         }
 
-        // API-Sports provides season stats - use the first entry
-        guard let seasonStats = stats.first else {
-            print("⚠️ Statistics array is empty for position \(position)")
-            return nil
+        // Create a dictionary of statistics by group name
+        var statsByGroup: [String: [String: String]] = [:]
+        for group in groups {
+            guard let groupName = group.name, let statistics = group.statistics else { continue }
+
+            var groupStats: [String: String] = [:]
+            for stat in statistics {
+                if let name = stat.name, let value = stat.value {
+                    groupStats[name.lowercased()] = value
+                }
+            }
+            statsByGroup[groupName] = groupStats
         }
 
-        print("✅ Found statistics for position \(position):")
-        print("   - Team: \(seasonStats.team?.name ?? "nil"), Season: \(seasonStats.season ?? "nil")")
-        print("   - Passing: \(seasonStats.games.passing?.yards ?? 0) yds, \(seasonStats.games.passing?.touchdowns ?? 0) TDs")
-        print("   - Rushing: \(seasonStats.games.rushing?.yards ?? 0) yds, \(seasonStats.games.rushing?.touchdowns ?? 0) TDs")
-        print("   - Receiving: \(seasonStats.games.receiving?.yards ?? 0) yds, \(seasonStats.games.receiving?.touchdowns ?? 0) TDs")
+        // Parse integer value from string, handling commas
+        func parseInt(_ value: String?) -> Int? {
+            guard let value = value else { return nil }
+            let cleaned = value.replacingOccurrences(of: ",", with: "")
+            return Int(cleaned)
+        }
 
-        let games = seasonStats.games
+        // Parse double value from string
+        func parseDouble(_ value: String?) -> Double? {
+            guard let value = value else { return nil }
+            return Double(value)
+        }
 
-        let playerStats = PlayerStats(
-            passingYards: games.passing?.yards,
-            passingTouchdowns: games.passing?.touchdowns,
-            passingInterceptions: games.passing?.interceptions,
-            passingCompletions: games.passing?.completions,
-            passingAttempts: games.passing?.attempts,
-            rushingYards: games.rushing?.yards,
-            rushingTouchdowns: games.rushing?.touchdowns,
-            rushingAttempts: games.rushing?.attempts,
-            receivingYards: games.receiving?.yards,
-            receivingTouchdowns: games.receiving?.touchdowns,
-            receptions: games.receiving?.receptions,
-            targets: games.receiving?.targets,
-            tackles: games.defense?.tackles?.total,
-            sacks: games.defense?.sacks,
-            interceptions: games.defense?.interceptions
+        // Extract stats from groups
+        let passingStats = statsByGroup["Passing"]
+        let rushingStats = statsByGroup["Rushing"]
+        let receivingStats = statsByGroup["Receiving"]
+        let defensiveStats = statsByGroup["Defensive"]
+
+        return PlayerStats(
+            passingYards: parseInt(passingStats?["yards"]),
+            passingTouchdowns: parseInt(passingStats?["passing touchdowns"]),
+            passingInterceptions: parseInt(passingStats?["interceptions"]),
+            passingCompletions: parseInt(passingStats?["completions"]),
+            passingAttempts: parseInt(passingStats?["passing attempts"]),
+            rushingYards: parseInt(rushingStats?["yards"]),
+            rushingTouchdowns: parseInt(rushingStats?["rushing touchdowns"]),
+            rushingAttempts: parseInt(rushingStats?["rushing attempts"]),
+            receivingYards: parseInt(receivingStats?["receiving yards"]),
+            receivingTouchdowns: parseInt(receivingStats?["receiving touchdowns"]),
+            receptions: parseInt(receivingStats?["receptions"]),
+            targets: parseInt(receivingStats?["receiving targets"]),
+            tackles: parseInt(defensiveStats?["tackles"]),
+            sacks: parseDouble(defensiveStats?["sacks"]),
+            interceptions: parseInt(defensiveStats?["interceptions"])
         )
-
-        // Check if all fields are nil - if so, return nil instead of empty stats
-        let hasAnyStats = [
-            playerStats.passingYards, playerStats.passingTouchdowns,
-            playerStats.rushingYards, playerStats.rushingTouchdowns,
-            playerStats.receivingYards, playerStats.receivingTouchdowns,
-            playerStats.tackles
-        ].contains(where: { $0 != nil && $0 != 0 })
-
-        if !hasAnyStats {
-            print("⚠️ All stats are nil/zero for position \(position)")
-            return nil
-        }
-
-        return playerStats
     }
 
     /// Normalize position names from API-Sports to NFL standard positions.
@@ -259,15 +321,16 @@ public actor APISportsDataSource: Sendable {
     /// API-Sports uses numeric team IDs. This mapping is based on their database.
     /// Note: These IDs may need to be updated if API-Sports changes their system.
     private func getAPIFootballTeamID(abbreviation: String) -> Int? {
+        // Correct team ID mapping from API-Sports (verified 2024-01-03)
         let teamMap: [String: Int] = [
-            "ARI": 1, "ATL": 2, "BAL": 3, "BUF": 4,
-            "CAR": 5, "CHI": 6, "CIN": 7, "CLE": 8,
-            "DAL": 9, "DEN": 10, "DET": 11, "GB": 12,
-            "HOU": 13, "IND": 14, "JAX": 15, "KC": 16,
-            "LAC": 17, "LAR": 18, "LV": 19, "MIA": 20,
-            "MIN": 21, "NE": 22, "NO": 23, "NYG": 24,
-            "NYJ": 25, "PHI": 26, "PIT": 27, "SF": 28,
-            "SEA": 29, "TB": 30, "TEN": 31, "WAS": 32
+            "LV": 1, "JAX": 2, "NE": 3, "NYG": 4,
+            "BAL": 5, "TEN": 6, "DET": 7, "ATL": 8,
+            "CLE": 9, "CIN": 10, "ARI": 11, "PHI": 12,
+            "NYJ": 13, "SF": 14, "GB": 15, "CHI": 16,
+            "KC": 17, "WAS": 18, "CAR": 19, "BUF": 20,
+            "IND": 21, "PIT": 22, "SEA": 23, "TB": 24,
+            "MIA": 25, "HOU": 26, "NO": 27, "DEN": 28,
+            "DAL": 29, "LAC": 30, "LAR": 31, "MIN": 32
         ]
         return teamMap[abbreviation]
     }
@@ -298,20 +361,19 @@ public actor APISportsDataSource: Sendable {
 
 // MARK: - API-Sports Response Models
 
-/// Root response from API-Sports players endpoint.
+/// Root response from API-Sports players endpoint (bio data).
 private struct APISportsPlayersResponse: Codable {
     let results: Int
-    let response: [APISportsPlayerData]
+    let response: [APISportsPlayerBioData]
 
-    // Ignore other fields that have variable types
     enum CodingKeys: String, CodingKey {
         case results
         case response
     }
 }
 
-/// Player data container - flat structure from API
-private struct APISportsPlayerData: Codable {
+/// Player bio data from /players endpoint
+private struct APISportsPlayerBioData: Codable {
     let id: Int?
     let name: String?
     let position: String?
@@ -323,21 +385,48 @@ private struct APISportsPlayerData: Codable {
     let experience: Int?
     let image: String?
     let group: String?
-    let salary: String?
-    let statistics: [APISportsPlayerStatistics]?
 }
 
-/// Height/Weight measurement.
-private struct APISportsMeasurement: Codable {
-    let US: String?
+/// Root response from API-Sports players/statistics endpoint
+private struct APISportsStatisticsResponse: Codable {
+    let results: Int
+    let response: [APISportsPlayerStatisticsData]
+
+    enum CodingKeys: String, CodingKey {
+        case results
+        case response
+    }
 }
 
-/// Player statistics for a season.
-private struct APISportsPlayerStatistics: Codable {
+/// Player statistics data from /players/statistics endpoint
+private struct APISportsPlayerStatisticsData: Codable {
+    let player: APISportsPlayerInfo?
+    let teams: [APISportsTeamStats]?
+}
+
+/// Basic player info in statistics response
+private struct APISportsPlayerInfo: Codable {
+    let id: Int?
+    let name: String?
+    let image: String?
+}
+
+/// Team statistics container
+private struct APISportsTeamStats: Codable {
     let team: APISportsTeamInfo?
-    let league: String?
-    let season: String?
-    let games: APISportsGameStats
+    let groups: [APISportsStatisticsGroup]?
+}
+
+/// Statistics group (Passing, Rushing, etc.)
+private struct APISportsStatisticsGroup: Codable {
+    let name: String?
+    let statistics: [APISportsStatistic]?
+}
+
+/// Individual statistic
+private struct APISportsStatistic: Codable {
+    let name: String?
+    let value: String?
 }
 
 /// Team information.
@@ -345,55 +434,4 @@ private struct APISportsTeamInfo: Codable {
     let id: Int?
     let name: String?
     let logo: String?
-}
-
-/// Game statistics breakdown.
-private struct APISportsGameStats: Codable {
-    let passing: APISportsPassingStats?
-    let rushing: APISportsRushingStats?
-    let receiving: APISportsReceivingStats?
-    let defense: APISportsDefenseStats?
-}
-
-/// Passing statistics.
-private struct APISportsPassingStats: Codable {
-    let completions: Int?
-    let attempts: Int?
-    let yards: Int?
-    let touchdowns: Int?
-    let interceptions: Int?
-    let rating: Double?
-}
-
-/// Rushing statistics.
-private struct APISportsRushingStats: Codable {
-    let attempts: Int?
-    let yards: Int?
-    let touchdowns: Int?
-    let longest: Int?
-}
-
-/// Receiving statistics.
-private struct APISportsReceivingStats: Codable {
-    let targets: Int?
-    let receptions: Int?
-    let yards: Int?
-    let touchdowns: Int?
-    let longest: Int?
-}
-
-/// Defense statistics.
-private struct APISportsDefenseStats: Codable {
-    let tackles: APISportsTackles?
-    let sacks: Double?
-    let interceptions: Int?
-    let forcedFumbles: Int?
-    let fumblesRecovered: Int?
-}
-
-/// Tackle statistics.
-private struct APISportsTackles: Codable {
-    let total: Int?
-    let solo: Int?
-    let assisted: Int?
 }
