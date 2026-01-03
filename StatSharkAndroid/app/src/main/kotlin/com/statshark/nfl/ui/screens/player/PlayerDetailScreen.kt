@@ -447,11 +447,8 @@ fun DefensiveStats(stats: PlayerStatsDTO) {
             stats.sacks?.let {
                 item { StatCard(label = "Sacks", value = String.format("%.1f", it)) }
             }
-            stats.defensiveInterceptions?.let {
+            stats.interceptions?.let {
                 item { StatCard(label = "Interceptions", value = it.toString()) }
-            }
-            stats.forcedFumbles?.let {
-                item { StatCard(label = "Forced Fumbles", value = it.toString()) }
             }
         }
     }
@@ -559,4 +556,4 @@ private fun hasReceivingStats(stats: PlayerStatsDTO): Boolean =
     stats.receivingYards != null || stats.receivingTouchdowns != null || stats.receptions != null
 
 private fun hasDefensiveStats(stats: PlayerStatsDTO): Boolean =
-    stats.tackles != null || stats.sacks != null || stats.defensiveInterceptions != null
+    stats.tackles != null || stats.sacks != null || stats.interceptions != null
