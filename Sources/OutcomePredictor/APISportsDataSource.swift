@@ -125,24 +125,23 @@ public actor APISportsDataSource: Sendable {
         var playersWithoutPhotos = 0
 
         for playerData in response.response {
-            guard let player = playerData.player,
-                  let playerId = player.id,
-                  let playerName = player.name else {
+            guard let playerId = playerData.id,
+                  let playerName = playerData.name else {
                 continue
             }
 
             // Get position (API-Sports uses different position names)
-            let position = normalizePosition(player.position ?? "")
+            let position = normalizePosition(playerData.position ?? "")
 
             // Parse statistics
             let stats = parsePlayerStats(from: playerData.statistics, position: position)
 
-            // Extract bio data from API-Sports
-            let age = player.age
-            let heightUS = player.height?.US  // e.g., "6-2" or "6'2\""
-            let weightUS = player.weight?.US  // e.g., "215 lbs"
+            // Extract bio data from API-Sports (flat structure)
+            let age = playerData.age
+            let heightUS = playerData.height  // e.g., "6' 1\""
+            let weightUS = playerData.weight  // e.g., "340 lbs"
 
-            // Parse weight from string like "215 lbs" to Int
+            // Parse weight from string like "340 lbs" to Int
             let weight: Int? = if let weightStr = weightUS {
                 Int(weightStr.components(separatedBy: CharacterSet.decimalDigits.inverted).joined())
             } else {
@@ -150,25 +149,28 @@ public actor APISportsDataSource: Sendable {
             }
 
             // Track photo URL availability
-            if let photoURL = player.image, !photoURL.isEmpty {
+            if let photoURL = playerData.image, !photoURL.isEmpty {
                 playersWithPhotos += 1
             } else {
                 playersWithoutPhotos += 1
             }
 
+            // Convert number to String for jerseyNumber
+            let jerseyNumberStr = playerData.number.map { String($0) }
+
             let nflPlayer = Player(
                 id: String(playerId),
                 name: playerName,
                 position: position,
-                jerseyNumber: playerData.number,
-                photoURL: player.image, // API-Sports provides headshot URLs!
+                jerseyNumber: jerseyNumberStr,
+                photoURL: playerData.image,
                 team: team,
                 stats: stats,
                 height: heightUS,
                 weight: weight,
                 age: age,
-                college: nil, // API-Sports doesn't provide college info
-                experience: nil // API-Sports doesn't provide experience
+                college: playerData.college,
+                experience: playerData.experience
             )
 
             players.append(nflPlayer)
@@ -285,22 +287,21 @@ private struct APISportsPlayersResponse: Codable {
     }
 }
 
-/// Player data container.
+/// Player data container - flat structure from API
 private struct APISportsPlayerData: Codable {
-    let player: APISportsPlayer?
-    let number: String?
-    let statistics: [APISportsPlayerStatistics]?
-}
-
-/// Player information.
-private struct APISportsPlayer: Codable {
     let id: Int?
     let name: String?
-    let image: String? // Headshot URL
     let position: String?
+    let number: Int?
     let age: Int?
-    let height: APISportsMeasurement?
-    let weight: APISportsMeasurement?
+    let height: String?
+    let weight: String?
+    let college: String?
+    let experience: Int?
+    let image: String?
+    let group: String?
+    let salary: String?
+    let statistics: [APISportsPlayerStatistics]?
 }
 
 /// Height/Weight measurement.
