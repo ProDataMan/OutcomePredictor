@@ -42,11 +42,21 @@ android {
             useSupportLibrary = true
         }
 
+        // Default to Azure production URL
         buildConfigField("String", "API_BASE_URL", "\"https://statshark-api.azurewebsites.net/api/v1/\"")
     }
 
     buildTypes {
+        debug {
+            // Use local Docker container for debug builds
+            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/api/v1/\"")
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+
         release {
+            // Use Azure production for release builds
+            buildConfigField("String", "API_BASE_URL", "\"https://statshark-api.azurewebsites.net/api/v1/\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -14,18 +14,16 @@ final class APIClient: ObservableObject {
     }()
 
     init(baseURL: String? = nil) {
-        // Use environment variable if provided, otherwise use Azure production server
-        if let configuredURL = ProcessInfo.processInfo.environment["SERVER_BASE_URL"] {
-            self.baseURL = configuredURL
-        } else {
-            // StatShark Azure production server
-            self.baseURL = baseURL ?? "https://statshark-api.azurewebsites.net/api/v1"
-        }
+        // Use provided baseURL, or automatically switch based on build configuration
+        self.baseURL = baseURL ?? AppConfiguration.apiBaseURL
+
+        print("🔧 APIClient initialized with baseURL: \(self.baseURL)")
+        print("🔧 Environment: \(AppConfiguration.isDebug ? "DEBUG (local)" : "RELEASE (Azure)")")
 
         // Configure URLSession with extended timeouts for Azure cold starts
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 90.0  // 90 seconds for request (Azure cold start can take 60s)
-        config.timeoutIntervalForResource = 120.0 // 120 seconds for resource
+        config.timeoutIntervalForRequest = AppConfiguration.isDebug ? 30.0 : 90.0  // Shorter timeout for local dev
+        config.timeoutIntervalForResource = AppConfiguration.isDebug ? 60.0 : 120.0
         config.waitsForConnectivity = true
         self.urlSession = URLSession(configuration: config)
     }

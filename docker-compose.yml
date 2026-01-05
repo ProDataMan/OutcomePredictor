@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV=development
+      - PORT=8080
+      - HOSTNAME=0.0.0.0
+      - ESPN_BASE_URL=${ESPN_BASE_URL:-https://site.api.espn.com/apis/site/v2/sports/football/nfl}
+      - ODDS_API_KEY=${ODDS_API_KEY}
+      - ODDS_API_BASE_URL=${ODDS_API_BASE_URL:-https://api.the-odds-api.com/v4}
+      - NEWS_API_KEY=${NEWS_API_KEY}
+      - API_SPORTS_KEY=${API_SPORTS_KEY}
+      - CACHE_EXPIRATION=${CACHE_EXPIRATION:-21600}
+    volumes:
+      - ./Sources:/app/Sources:ro
+      - ./Public:/app/Public:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/teams"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: statshark-network
